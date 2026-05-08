@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { CreditCard, Lock, Handshake, DollarSign, Copy, CheckCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
-import { Closings, Listings, Auth } from '../services';
+import { Closings, Listings, Auth, Stripe, Profile } from '../services';
 import { getUserById, formatMoney, formatDate } from '../data/demo';
 import { useToast } from '../hooks/useToast';
 import { useLocation } from 'react-router-dom';
+import Seo from '../components/Seo';
+import PayModal from '../components/PayModal';
 
 const STEPS = [
   { key: 'pending_payment', icon: '💳', label: 'Initiate' },
@@ -29,6 +31,7 @@ export default function ClosingsPage() {
   const [buyerName, setBuyerName] = useState('');
   const [buyerEmail, setBuyerEmail] = useState('');
   const [agreedPrice, setAgreedPrice] = useState('');
+  const [payClosing, setPayClosing] = useState(null);
   const [, setTick] = useState(0);
   const user = Auth.getUser();
 
@@ -43,16 +46,24 @@ export default function ClosingsPage() {
 
   const toggleExpand = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
 
+  const [creating, setCreating] = useState(false);
   const handleCreateClosing = async () => {
     if (!showStartModal || !buyerName || !buyerEmail || !agreedPrice) return;
-    const closing = await Closings.create({
-      listingId: showStartModal.id, buyerName, buyerEmail,
-      agreedPrice: parseInt(agreedPrice),
-    });
-    addToast({ type: 'success', title: 'Closing Created', message: 'Payment link generated.' });
-    setShowStartModal(null);
-    setBuyerName(''); setBuyerEmail(''); setAgreedPrice('');
-    setTick(t => t + 1);
+    setCreating(true);
+    try {
+      await Closings.create({
+        listingId: showStartModal.id, buyerName, buyerEmail,
+        agreedPrice: parseInt(agreedPrice),
+      });
+      addToast({ type: 'success', title: 'Closing Created', message: 'Payment link generated.' });
+      setShowStartModal(null);
+      setBuyerName(''); setBuyerEmail(''); setAgreedPrice('');
+      setTick(t => t + 1);
+    } catch (err) {
+      addToast({ type: 'error', title: 'Could not create closing', message: err?.message || 'Unknown error' });
+    } finally {
+      setCreating(false);
+    }
   };
 
   const price = parseInt(agreedPrice) || 0;
@@ -64,6 +75,7 @@ export default function ClosingsPage() {
 
   return (
     <div className="page">
+      <Seo title="Closings" noIndex />
       <div className="page-header">
         <div className="page-title">Closings</div>
         <div className="page-subtitle">Track escrow, handoffs, and payouts</div>
@@ -91,8 +103,10 @@ export default function ClosingsPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {filtered.map(c => {
             const listing = Listings.getById(c.listing_id);
-            const seller = getUserById(c.seller_id);
-            const closer = getUserById(c.closer_id);
+            // Profile.get reads the live Postgres-backed cache; getUserById is
+            // demo-only and won't resolve real UUIDs.
+            const seller = Profile.get(c.seller_id);
+            const closer = Profile.get(c.closer_id);
             const stepIdx = getStepIndex(c.status);
             const isExpanded = expanded[c.id];
             const commission = Math.round(c.agreed_price * c.commission_rate / 100);
@@ -161,35 +175,40 @@ export default function ClosingsPage() {
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       {c.status === 'pending_payment' && (
                         <>
-                          <button className="btn btn-secondary btn-sm" onClick={() => {
-                            navigator.clipboard.writeText(c.stripe_checkout_url || '');
-                            addToast({ title: 'Link Copied', type: 'success' });
-                          }}>
-                            <Copy size={14} /> Copy Payment Link
+                          <button className="btn btn-primary btn-sm" onClick={() => setPayClosing(c)}>
+                            <CreditCard size={14} /> Pay now
                           </button>
-                          <button className="btn btn-primary btn-sm" onClick={async () => {
-                            await Closings.simulatePayment(c.id);
-                            addToast({ type: 'success', title: 'Payment Simulated', message: 'Funds are now in escrow.' });
-                            setTick(t => t + 1);
+                          <button className="btn btn-secondary btn-sm" onClick={() => {
+                            const url = Stripe.getCheckoutUrl(c.id);
+                            navigator.clipboard.writeText(url);
+                            addToast({ title: 'Payment link copied', message: 'Send it to the buyer.', type: 'success' });
                           }}>
-                            💳 Simulate Payment
+                            <Copy size={14} /> Copy link for buyer
                           </button>
                         </>
                       )}
                       {c.status === 'paid' && isSeller && (
                         <button className="btn btn-primary btn-sm" onClick={async () => {
-                          await Closings.confirmHandoff(c.id);
-                          addToast({ type: 'success', title: 'Handoff Confirmed' });
-                          setTick(t => t + 1);
+                          try {
+                            await Closings.confirmHandoff(c.id);
+                            addToast({ type: 'success', title: 'Handoff Confirmed' });
+                            setTick(t => t + 1);
+                          } catch (err) {
+                            addToast({ type: 'error', title: 'Could not confirm handoff', message: err?.message || 'Unknown error' });
+                          }
                         }}>
                           <Handshake size={14} /> Confirm Item Handed Off
                         </button>
                       )}
                       {c.status === 'item_confirmed' && (
                         <button className="btn btn-primary btn-sm" onClick={async () => {
-                          await Closings.complete(c.id);
-                          addToast({ type: 'success', title: 'Deal Complete!', message: 'Funds released to all parties.' });
-                          setTick(t => t + 1);
+                          try {
+                            await Closings.complete(c.id);
+                            addToast({ type: 'success', title: 'Deal Complete!', message: 'Funds released to all parties.' });
+                            setTick(t => t + 1);
+                          } catch (err) {
+                            addToast({ type: 'error', title: 'Could not release funds', message: err?.message || 'Unknown error' });
+                          }
                         }}>
                           <DollarSign size={14} /> Release Funds & Complete
                         </button>
@@ -243,12 +262,24 @@ export default function ClosingsPage() {
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setShowStartModal(null)}>Cancel</button>
               <button className="btn btn-primary" onClick={handleCreateClosing}
-                disabled={!buyerName || !buyerEmail || !agreedPrice}>
-                Generate Payment Link
+                disabled={!buyerName || !buyerEmail || !agreedPrice || creating}>
+                {creating ? 'Generating…' : 'Generate Payment Link'}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {payClosing && (
+        <PayModal
+          closing={payClosing}
+          onClose={() => setPayClosing(null)}
+          onSuccess={() => {
+            addToast({ type: 'success', title: 'Payment received', message: 'Funds are in escrow. Confirm handoff when delivered.' });
+            setPayClosing(null);
+            setTick(t => t + 1);
+          }}
+        />
       )}
     </div>
   );

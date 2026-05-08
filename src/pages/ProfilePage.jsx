@@ -3,6 +3,7 @@ import { MapPin, Calendar, Star, Shield, Camera, Edit3, Eye, Check, X, Settings,
 import { Auth, Profile, Reviews, Closings, Listings, Stripe } from '../services';
 import { formatMoney, formatDate, CATEGORIES } from '../data/demo';
 import { useToast } from '../hooks/useToast';
+import Seo from '../components/Seo';
 
 const BADGES = [
   { key: 'verified', icon: '🛡️', label: 'Verified' },
@@ -70,6 +71,7 @@ export default function ProfilePage() {
 
   return (
     <div className="page" style={{ maxWidth: 800, margin: '0 auto' }}>
+      <Seo title="Profile" noIndex />
       {/* Header */}
       <div className="card" style={{ padding: 32, marginBottom: 24 }}>
         <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
@@ -283,18 +285,36 @@ function SettingsModal({ user, onClose, onSave }) {
               </div>
             </Section>
 
-            <Section title="Stripe Payout" status={stripeStatus.enabled ? 'complete' : 'pending'}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
+            <Section title="Stripe Payout" status={stripeStatus.enabled ? 'complete' : (stripeStatus.connected ? 'pending' : 'pending')}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 500 }}>
-                    {stripeStatus.enabled ? 'Payouts Enabled' : 'Connect Stripe to receive payouts'}
+                    {stripeStatus.enabled
+                      ? 'Payouts enabled'
+                      : stripeStatus.connected
+                        ? 'Onboarding incomplete'
+                        : 'Connect Stripe to receive payouts'}
                   </div>
                   <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                    {stripeStatus.enabled ? 'Your account is ready to receive funds.' : 'Required to receive commission payouts.'}
+                    {stripeStatus.enabled
+                      ? 'Your account is ready to receive funds.'
+                      : stripeStatus.connected
+                        ? 'Finish onboarding to start receiving payouts.'
+                        : 'Required before any deal can pay out commission.'}
                   </div>
                 </div>
-                <button className="btn btn-secondary btn-sm">
-                  <ExternalLink size={14} /> {stripeStatus.enabled ? 'Dashboard' : 'Connect'}
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={async () => {
+                    try {
+                      const data = await Stripe.getConnectOnboardingLink({});
+                      if (data?.url) window.location.assign(data.url);
+                    } catch (e) {
+                      addToast({ type: 'error', title: 'Stripe', message: e.message || 'Could not start onboarding' });
+                    }
+                  }}
+                >
+                  <ExternalLink size={14} /> {stripeStatus.connected ? 'Continue onboarding' : 'Connect Stripe'}
                 </button>
               </div>
             </Section>

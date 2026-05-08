@@ -4,6 +4,7 @@ import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { Listings } from '../services';
 import { CATEGORIES, CONDITIONS, formatMoney } from '../data/demo';
 import { useToast } from '../hooks/useToast';
+import Seo from '../components/Seo';
 
 export default function PostListing() {
   const navigate = useNavigate();
@@ -85,6 +86,7 @@ export default function PostListing() {
 
   return (
     <div className="page" style={{ maxWidth: 720, margin: '0 auto' }}>
+      <Seo title="Post a listing" noIndex />
       <div className="page-header">
         <div className="page-title">Post a Listing</div>
         <div className="page-subtitle">List an item for closers to sell</div>

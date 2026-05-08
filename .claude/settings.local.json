@@ -15,7 +15,31 @@
       "Bash(npx getdesign@latest add airbnb)",
       "Bash(node -e \"console.log\\(require\\(''./node_modules/react-router-dom/package.json''\\).version\\)\")",
       "Bash(git add -A)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "mcp__plugin_lazyweb_lazyweb__lazyweb_health",
+      "Skill(lazyweb:lazyweb-design-improve)",
+      "Skill(lazyweb:lazyweb-design-improve:*)",
+      "mcp__plugin_lazyweb_lazyweb__lazyweb_search",
+      "Bash(node -e \"const l=require\\('lucide-react'\\); ['Twitter','Instagram','Linkedin','Facebook','Youtube','Github'].forEach\\(n => console.log\\(n, !!l[n]\\)\\)\")",
+      "Bash(node -e \"const l=require\\('lucide-react'\\); const keys=Object.keys\\(l\\); console.log\\('total:', keys.length\\); console.log\\(keys.filter\\(k => /share|link|globe|messag|mail|phone|at/i.test\\(k\\)\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(npm install *)",
+      "Bash(git check-ignore *)",
+      "mcp__mcp-registry__list_connectors",
+      "mcp__0bdfe270-b765-4d8f-b17d-a2749c1f459a__get_logs",
+      "mcp__0bdfe270-b765-4d8f-b17d-a2749c1f459a__execute_sql",
+      "mcp__0bdfe270-b765-4d8f-b17d-a2749c1f459a__list_tables",
+      "mcp__0bdfe270-b765-4d8f-b17d-a2749c1f459a__list_migrations",
+      "mcp__0bdfe270-b765-4d8f-b17d-a2749c1f459a__apply_migration",
+      "mcp__0bdfe270-b765-4d8f-b17d-a2749c1f459a__get_advisors",
+      "Bash(npm view *)",
+      "mcp__0bdfe270-b765-4d8f-b17d-a2749c1f459a__get_publishable_keys",
+      "mcp__0bdfe270-b765-4d8f-b17d-a2749c1f459a__deploy_edge_function",
+      "Bash(python3 -c \"import sys,json; print\\(json.dumps\\(sys.stdin.read\\(\\)\\)\\)\")",
+      "mcp__0bdfe270-b765-4d8f-b17d-a2749c1f459a__list_edge_functions",
+      "Bash(python3 -c \"import json,sys; d=json.loads\\(sys.stdin.read\\(\\)\\)[0]['text']; r=json.loads\\(d\\); items=r.get\\('result',{}\\).get\\('result',[]\\); [print\\(item.get\\('timestamp',0\\), item.get\\('msg',''\\), item.get\\('path',''\\), item.get\\('status',''\\), item.get\\('error',''\\), '||', item.get\\('event_message',''\\)[:200]\\) for item in items[:30]]\")",
+      "Bash(python3 -c \"import json,sys; d=json.loads\\(sys.stdin.read\\(\\)\\)[0]['text']; r=json.loads\\(d\\); items=r.get\\('result',{}\\).get\\('result',[]\\); [print\\(item.get\\('timestamp',0\\), '|', item.get\\('msg',''\\)[:60], '|', item.get\\('path',''\\)[:30], '|', item.get\\('error',''\\)[:60]\\) for item in items if 'signup' in item.get\\('path',''\\).lower\\(\\) or 'rate' in item.get\\('msg',''\\).lower\\(\\) or 'mail' in item.get\\('msg',''\\).lower\\(\\) or 'verify' in item.get\\('path',''\\).lower\\(\\)]\")",
+      "Bash(python3 -c ' *)",
+      "Bash(npm run *)"
     ]
   }
 }

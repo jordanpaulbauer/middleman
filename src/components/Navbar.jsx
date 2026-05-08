@@ -1,8 +1,20 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { MessageCircle, Bell, User, LogOut, Settings, ChevronDown, Menu, Globe } from 'lucide-react';
-import { Auth, Chat, Notifications } from '../services';
+import { MessageCircle, Bell, User, LogOut, Settings, ChevronDown, Menu, Repeat } from 'lucide-react';
+import { Auth, Mode, Chat, Notifications } from '../services';
 import NotificationDropdown from './NotificationDropdown';
+import { useIsNarrow } from '../hooks/useMediaQuery';
+
+const CLOSER_TABS = [
+  { to: '/browse', label: 'Browse' },
+  { to: '/closer', label: 'Dashboard' },
+  { to: '/closings', label: 'Closings' },
+];
+const SELLER_TABS = [
+  { to: '/seller', label: 'Dashboard' },
+  { to: '/post', label: 'Post listing' },
+  { to: '/closings', label: 'Closings' },
+];
 
 export default function Navbar({ onOpenChat, user }) {
   const navigate = useNavigate();
@@ -10,14 +22,17 @@ export default function Navbar({ onOpenChat, user }) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const unreadMessages = Chat.getTotalUnread();
   const unreadNotifs = Notifications.getUnreadCount();
+  const mode = Mode.get();
+  const tabs = mode === 'seller' ? SELLER_TABS : CLOSER_TABS;
+  const otherMode = mode === 'closer' ? 'seller' : 'closer';
+  const otherModeHome = otherMode === 'closer' ? '/browse' : '/seller';
+  const isNarrow = useIsNarrow();
 
-  const tabs = [
-    { to: '/browse', label: 'Listings' },
-    { to: '/closer', label: 'Closer' },
-    { to: '/seller', label: 'Seller' },
-    { to: '/closings', label: 'Closings' },
-    { to: '/post', label: 'Post' },
-  ];
+  const handleSwitchMode = () => {
+    Mode.set(otherMode);
+    setShowUserMenu(false);
+    navigate(otherModeHome);
+  };
 
   return (
     <nav style={{
@@ -29,16 +44,25 @@ export default function Navbar({ onOpenChat, user }) {
       {/* Top row: Logo, nav tabs centered, right actions */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        height: 80, maxWidth: 1280, margin: '0 auto',
+        height: isNarrow ? 64 : 80, maxWidth: 1280, margin: '0 auto',
+        gap: 12,
       }}>
-        {/* Logo */}
-        <div style={{ fontWeight: 800, fontSize: 22, letterSpacing: '-0.5px', cursor: 'pointer', flexShrink: 0 }}
-             onClick={() => navigate('/browse')}>
-          <span style={{ color: 'var(--rausch)' }}>middleman</span>
+        {/* Logo + role subscript (Airbnb "· hosting" pattern) */}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, cursor: 'pointer', flexShrink: 0 }}
+             onClick={() => navigate(mode === 'seller' ? '/seller' : '/browse')}>
+          <span style={{ color: 'var(--rausch)', fontWeight: 800, fontSize: isNarrow ? 18 : 22, letterSpacing: '-0.5px' }}>middleman</span>
+          {!isNarrow && (
+            <span style={{
+              color: 'var(--text-muted)', fontWeight: 500, fontSize: 14, letterSpacing: '-0.1px',
+              textTransform: 'lowercase',
+            }}>
+              · {mode === 'seller' ? 'seller' : 'closer'}
+            </span>
+          )}
         </div>
 
-        {/* Center: Tab Links (Airbnb-style bottom-border active) */}
-        <div style={{ display: 'flex', gap: 0, height: '100%' }}>
+        {/* Center: Tab Links — hidden on narrow; available via avatar dropdown instead */}
+        <div style={{ display: isNarrow ? 'none' : 'flex', gap: 0, height: '100%' }}>
           {tabs.map(t => (
             <NavLink key={t.to} to={t.to}
               style={({ isActive }) => ({
@@ -58,8 +82,8 @@ export default function Navbar({ onOpenChat, user }) {
 
         {/* Right: actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-          {/* Chat */}
-          <button onClick={onOpenChat}
+          {/* Chat — navigates to global /messages */}
+          <button onClick={() => navigate('/messages')}
             style={{
               position: 'relative', width: 40, height: 40, borderRadius: '50%',
               border: 'none', background: 'transparent', cursor: 'pointer',
@@ -138,28 +162,52 @@ export default function Navbar({ onOpenChat, user }) {
             {showUserMenu && (
               <div style={{
                 position: 'absolute', right: 0, top: 'calc(100% + 8px)',
-                width: 240, background: 'var(--bg)', borderRadius: 12,
+                width: 260, background: 'var(--bg)', borderRadius: 12,
                 boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border-light)',
                 padding: '8px 0', zIndex: 1200, animation: 'fadeIn 150ms ease',
               }}>
                 <div style={{ padding: '2px 0' }}>
+                  <MenuButton icon={<Repeat size={16} />}
+                    label={`Switch to ${otherMode} view`}
+                    onClick={handleSwitchMode} bold />
+                </div>
+                {isNarrow && (
+                  <>
+                    <div style={{ height: 1, background: 'var(--border-light)', margin: '4px 0' }} />
+                    <div style={{ padding: '2px 0' }}>
+                      {tabs.map(t => (
+                        <MenuButton
+                          key={t.to}
+                          icon={<Menu size={16} />}
+                          label={t.label}
+                          onClick={() => { navigate(t.to); setShowUserMenu(false); }}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+                <div style={{ height: 1, background: 'var(--border-light)', margin: '4px 0' }} />
+                <div style={{ padding: '2px 0' }}>
                   <MenuButton icon={<User size={16} />} label="Profile"
-                    onClick={() => { navigate('/profile'); setShowUserMenu(false); }} bold />
+                    onClick={() => { navigate('/profile'); setShowUserMenu(false); }} />
                   <MenuButton icon={<MessageCircle size={16} />} label="Messages"
-                    onClick={() => { onOpenChat(); setShowUserMenu(false); }}
+                    onClick={() => { navigate('/messages'); setShowUserMenu(false); }}
                     badge={unreadMessages > 0 ? unreadMessages : null} />
                   <MenuButton icon={<Settings size={16} />} label="Settings"
                     onClick={() => { navigate('/profile'); setShowUserMenu(false); }} />
                 </div>
                 <div style={{ height: 1, background: 'var(--border-light)', margin: '4px 0' }} />
                 <div style={{ padding: '2px 0' }}>
-                  <MenuButton icon={<Globe size={16} />} label="Become a Host"
-                    onClick={() => { navigate('/post'); setShowUserMenu(false); }} />
-                </div>
-                <div style={{ height: 1, background: 'var(--border-light)', margin: '4px 0' }} />
-                <div style={{ padding: '2px 0' }}>
                   <MenuButton icon={<LogOut size={16} />} label="Log out"
-                    onClick={() => setShowUserMenu(false)} />
+                    onClick={() => {
+                      // Fire-and-forget: Auth.logout clears local state
+                      // synchronously and attempts the network revoke in the
+                      // background. We navigate immediately so the UI flips
+                      // even if the network call is slow.
+                      setShowUserMenu(false);
+                      Auth.logout();
+                      navigate('/');
+                    }} />
                 </div>
               </div>
             )}

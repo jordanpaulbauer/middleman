@@ -4,6 +4,7 @@ import { Listings, Watchlist } from '../services';
 import { getUserById, formatMoney, CATEGORIES } from '../data/demo';
 import CountdownTimer from '../components/CountdownTimer';
 import ListingDetailModal from '../components/ListingDetailModal';
+import Seo from '../components/Seo';
 
 const SORTS = [
   { value: 'trending', label: '🔥 Trending' },
@@ -68,6 +69,7 @@ export default function BrowsePage({ onOpenChat }) {
 
   return (
     <div className="page">
+      <Seo title="Browse listings" noIndex />
       {/* ── Category pill bar ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10,

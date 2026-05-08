@@ -4,6 +4,7 @@ import { Flame, DollarSign, TrendingUp, Zap, Heart, Bell, X, MessageCircle, Cloc
 import { Listings, Watchlist, Closings, Auth, Chat } from '../services';
 import { getUserById, formatMoney, formatDate } from '../data/demo';
 import CountdownTimer, { CountdownProgress } from '../components/CountdownTimer';
+import Seo from '../components/Seo';
 
 export default function CloserDashboard({ onOpenChat }) {
   const navigate = useNavigate();
@@ -37,6 +38,7 @@ export default function CloserDashboard({ onOpenChat }) {
 
   return (
     <div className="page">
+      <Seo title="Closer dashboard" noIndex />
       <div className="page-header">
         <div className="page-title">Closer Dashboard</div>
         <div className="page-subtitle">Your deals, pipeline, and earnings</div>

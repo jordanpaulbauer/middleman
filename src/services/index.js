@@ -1,47 +1,523 @@
 /**
  * MIDDLEMAN Services Layer
- * All UI calls go through here — never call Supabase/Stripe directly.
- * In demo mode, returns mock data. In prod, swap to real API calls.
+ *
+ * Every UI call goes through here. Two backends:
+ *  - Supabase (when VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY are set)
+ *  - In-memory demo (fallback for offline dev / tests)
+ *
+ * Read methods (`getAll`, `getById`, `isInWatchlist`, ...) stay synchronous
+ * by reading from a per-table cache. The cache is populated by `refreshAll()`
+ * after auth resolves, and kept fresh by Postgres realtime subscriptions.
+ *
+ * Write methods (`create`, `claim`, `add`, ...) are always async — they write
+ * to Postgres, and the realtime subscription updates the cache.
  */
 import {
   DEMO_USER, DEMO_USERS, DEMO_LISTINGS, DEMO_CLOSINGS,
   DEMO_CONVERSATIONS, DEMO_MESSAGES, DEMO_REVIEWS,
   DEMO_WATCHLIST, DEMO_NOTIFICATIONS, getUserById,
 } from '../data/demo';
+import { supabase, isSupabaseEnabled } from '../lib/supabase';
 
-// Deep clone helper
 const clone = (d) => JSON.parse(JSON.stringify(d));
 
-// In-memory state for demo mode (mutated by actions)
-let listings = clone(DEMO_LISTINGS);
-let closings = clone(DEMO_CLOSINGS);
-let conversations = clone(DEMO_CONVERSATIONS);
-let messages = clone(DEMO_MESSAGES);
-let reviews = clone(DEMO_REVIEWS);
-let watchlist = clone(DEMO_WATCHLIST);
-let notifications = clone(DEMO_NOTIFICATIONS);
-let currentUser = clone(DEMO_USER);
+// In-memory cache. Same shape regardless of backend.
+let listings = isSupabaseEnabled ? [] : clone(DEMO_LISTINGS);
+let closings = isSupabaseEnabled ? [] : clone(DEMO_CLOSINGS);
+let conversations = isSupabaseEnabled ? [] : clone(DEMO_CONVERSATIONS);
+let messages = isSupabaseEnabled ? [] : clone(DEMO_MESSAGES);
+let reviews = isSupabaseEnabled ? [] : clone(DEMO_REVIEWS);
+let watchlist = isSupabaseEnabled ? [] : clone(DEMO_WATCHLIST);
+let notifications = isSupabaseEnabled ? [] : clone(DEMO_NOTIFICATIONS);
+let profilesById = {}; // populated when we load listings/closings
+let currentUser = isSupabaseEnabled ? null : clone(DEMO_USER);
 
-// Subscribers for state changes
+// Subscribers — every page hooks into this for re-renders on data change.
 const listeners = new Set();
 function notify() { listeners.forEach(fn => fn()); }
 export function subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 
-// ── Auth ──
-export const Auth = {
-  getUser: () => currentUser,
-  login: async (email, password) => { currentUser = clone(DEMO_USER); notify(); return currentUser; },
-  register: async (data) => { currentUser = { ...clone(DEMO_USER), ...data }; notify(); return currentUser; },
-  logout: async () => { currentUser = null; notify(); },
-  socialAuth: async (provider) => { currentUser = clone(DEMO_USER); notify(); return currentUser; },
-  resetPassword: async (email) => ({ success: true }),
+// ── Mappers: Postgres rows ↔ UI shape ─────────────────────────────
+// Postgres stores cents/basis-points; the UI uses dollars/percent.
+const bpsToPct = (bps) => Math.round((bps || 0) / 100);
+const pctToBps = (pct) => Math.round((pct || 0) * 100);
+const centsToDollars = (cents) => Math.round((cents || 0) / 100);
+const dollarsToCents = (dollars) => Math.round((dollars || 0) * 100);
+
+function dbListingToUi(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    seller_id: row.seller_id,
+    title: row.title,
+    description: row.description,
+    category: row.category,
+    condition: row.condition,
+    price: centsToDollars(row.price_cents),
+    commission: bpsToPct(row.commission_bps),
+    location: row.location,
+    photos: row.photos || [],
+    status: row.status,
+    claimed_by: row.claimed_by,
+    claim_start: row.claim_start,
+    claim_end: row.claim_end,
+    has_been_extended: row.has_been_extended,
+    views: row.views || 0,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+function dbClosingToUi(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    listing_id: row.listing_id,
+    seller_id: row.seller_id,
+    closer_id: row.closer_id,
+    buyer_name: row.buyer_name,
+    buyer_email: row.buyer_email,
+    agreed_price: centsToDollars(row.agreed_price_cents),
+    commission_rate: bpsToPct(row.commission_bps),
+    platform_fee_pct: bpsToPct(row.platform_fee_bps),
+    status: row.status,
+    stripe_payment_intent_id: row.stripe_payment_intent_id,
+    stripe_checkout_url: row.stripe_checkout_url,
+    created_at: row.created_at,
+    completed_at: row.completed_at,
+  };
+}
+
+function dbReviewToUi(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    listing_id: row.listing_id,
+    seller_id: row.seller_id,
+    closer_id: row.closer_id,
+    stars: row.stars,
+    text: row.text,
+    created_at: row.created_at,
+  };
+}
+
+// Cache profiles we encounter so getUserById() can synchronously hand them out.
+function cacheProfile(p) {
+  if (p?.id) profilesById[p.id] = p;
+}
+function getProfileFromCache(id) {
+  return profilesById[id] || (DEMO_USERS.find(u => u.id === id)) || null;
+}
+
+// ── Auth ──────────────────────────────────────────────────────────
+const AUTH_KEY = 'middleman_auth';
+const readAuth = () => {
+  try { const raw = localStorage.getItem(AUTH_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
+};
+const writeAuth = (val) => {
+  try { if (val) localStorage.setItem(AUTH_KEY, JSON.stringify(val)); else localStorage.removeItem(AUTH_KEY); } catch {}
 };
 
-// ── Listings ──
+const persisted = !isSupabaseEnabled && typeof localStorage !== 'undefined' ? readAuth() : null;
+let authenticated = !!persisted;
+if (persisted && currentUser) currentUser = { ...currentUser, ...persisted };
+
+async function loadProfileFromSupabase(authUserId) {
+  if (!isSupabaseEnabled || !authUserId) return null;
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', authUserId)
+    .maybeSingle();
+  if (profile) { cacheProfile(profile); return profile; }
+  if (error && error.code !== 'PGRST116') {
+    console.warn('[Auth] profile fetch failed:', error.message);
+  }
+  const { data: { user } } = await supabase.auth.getUser();
+  return {
+    id: authUserId,
+    email: user?.email,
+    full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'New user',
+    photo_url: null,
+    location: null,
+    bio: null,
+    specialties: [],
+    joined_at: user?.created_at || new Date().toISOString(),
+  };
+}
+
+// ── Cache loaders (Supabase mode) ────────────────────────────────
+async function loadListings() {
+  if (!isSupabaseEnabled) return;
+  const { data, error } = await supabase
+    .from('listings')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) { console.warn('[Listings] load:', error.message); return; }
+  listings = (data || []).map(dbListingToUi);
+  // Eagerly fetch any seller/closer profile we don't already have.
+  const ids = new Set();
+  data?.forEach(r => { if (r.seller_id) ids.add(r.seller_id); if (r.claimed_by) ids.add(r.claimed_by); });
+  await loadProfilesByIds([...ids]);
+}
+
+async function loadClosings() {
+  if (!isSupabaseEnabled || !currentUser?.id) return;
+  const { data, error } = await supabase
+    .from('closings')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) { console.warn('[Closings] load:', error.message); return; }
+  closings = (data || []).map(dbClosingToUi);
+}
+
+async function loadWatchlist() {
+  if (!isSupabaseEnabled || !currentUser?.id) { watchlist = []; return; }
+  const { data, error } = await supabase
+    .from('watchlist')
+    .select('*')
+    .eq('user_id', currentUser.id);
+  if (error) { console.warn('[Watchlist] load:', error.message); return; }
+  watchlist = data || [];
+}
+
+async function loadNotifications() {
+  if (!isSupabaseEnabled || !currentUser?.id) { notifications = []; return; }
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false });
+  if (error) { console.warn('[Notifications] load:', error.message); return; }
+  notifications = data || [];
+}
+
+async function loadReviews() {
+  if (!isSupabaseEnabled) return;
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) { console.warn('[Reviews] load:', error.message); return; }
+  reviews = (data || []).map(dbReviewToUi);
+}
+
+async function loadConversations() {
+  if (!isSupabaseEnabled || !currentUser?.id) { conversations = []; return; }
+  // RLS already filters to conversations where the user is seller_id or closer_id.
+  const { data, error } = await supabase
+    .from('conversations')
+    .select('*')
+    .order('last_message_at', { ascending: false });
+  if (error) { console.warn('[Conversations] load:', error.message); return; }
+  conversations = data || [];
+  // Eagerly fetch the other-party profiles so getConversations can render names sync.
+  const ids = new Set();
+  conversations.forEach(c => { ids.add(c.seller_id); ids.add(c.closer_id); });
+  await loadProfilesByIds([...ids]);
+}
+
+async function loadMessages() {
+  if (!isSupabaseEnabled || !currentUser?.id) { messages = []; return; }
+  // RLS scopes this to conversations the user is part of. With small chat
+  // volume per user this is fine; switch to per-conversation pagination
+  // once any single user accumulates >1000 messages.
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .order('created_at', { ascending: true });
+  if (error) { console.warn('[Messages] load:', error.message); return; }
+  messages = data || [];
+}
+
+async function loadProfilesByIds(ids) {
+  if (!isSupabaseEnabled || !ids?.length) return;
+  const missing = ids.filter(id => !profilesById[id]);
+  if (!missing.length) return;
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .in('id', missing);
+  if (error) return;
+  data?.forEach(cacheProfile);
+}
+
+async function refreshAll() {
+  await Promise.all([
+    loadListings(),
+    loadClosings(),
+    loadWatchlist(),
+    loadNotifications(),
+    loadReviews(),
+    loadConversations(),
+    loadMessages(),
+  ]);
+  notify();
+}
+
+// ── Realtime subscriptions ───────────────────────────────────────
+let realtimeChannel = null;
+function startRealtime() {
+  if (!isSupabaseEnabled || realtimeChannel) return;
+  // Unique channel name per page session so HMR-leftover channels don't collide.
+  const channelName = `middleman-data-${Math.random().toString(36).slice(2, 8)}`;
+  realtimeChannel = supabase
+    .channel(channelName)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'listings' }, () => {
+      loadListings().then(notify);
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'closings' }, () => {
+      loadClosings().then(notify);
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews' }, () => {
+      loadReviews().then(notify);
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'watchlist' }, () => {
+      loadWatchlist().then(notify);
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+      loadNotifications().then(notify);
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+      // Fast path: append the new message to cache without a full reload.
+      const m = payload.new;
+      if (m && !messages.some(x => x.id === m.id)) {
+        messages = [...messages, m];
+      }
+      // The conversation_last_message trigger updated last_message_*; reload
+      // conversations so the inbox reorders. Cheap query (one user's convos).
+      loadConversations().then(notify);
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
+      const m = payload.new;
+      if (!m) return;
+      messages = messages.map(x => x.id === m.id ? m : x);
+      notify();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
+      loadConversations().then(notify);
+    })
+    .subscribe();
+}
+
+// HMR cleanup — when Vite swaps this module, tear down realtime + auth listeners
+// so we don't leak websocket subscriptions and stale onAuthStateChange handlers.
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    try {
+      if (realtimeChannel) supabase?.removeChannel(realtimeChannel);
+    } catch {}
+    realtimeChannel = null;
+  });
+}
+
+// ── Auth bootstrap (Supabase mode) ───────────────────────────────
+let authStateSub = null;
+if (isSupabaseEnabled) {
+  (async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      currentUser = await loadProfileFromSupabase(session.user.id);
+      authenticated = !!currentUser;
+      cacheProfile(currentUser);
+      await refreshAll();
+      startRealtime();
+    } else {
+      // Even logged-out users may want to read public listings (for /listing/:id).
+      await loadListings();
+      notify();
+    }
+  })();
+
+  const { data: subData } = supabase.auth.onAuthStateChange(async (event, session) => {
+    if (session?.user) {
+      currentUser = await loadProfileFromSupabase(session.user.id);
+      authenticated = !!currentUser;
+      cacheProfile(currentUser);
+      await refreshAll();
+      startRealtime();
+    } else {
+      currentUser = null;
+      authenticated = false;
+      // Keep public listings cache populated for the logged-out browsing case.
+      watchlist = [];
+      notifications = [];
+      closings = [];
+      conversations = [];
+      messages = [];
+    }
+    notify();
+  });
+  authStateSub = subData?.subscription;
+}
+
+// HMR cleanup also unsubscribes the auth listener.
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    try { authStateSub?.unsubscribe(); } catch {}
+    authStateSub = null;
+  });
+}
+
+// Auth public API.
+export const Auth = {
+  getUser: () => (authenticated ? currentUser : null),
+  isAuthenticated: () => authenticated,
+
+  login: async (email, password) => {
+    if (!email || !password) throw new Error('Email and password are required');
+    if (isSupabaseEnabled) {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw new Error(error.message);
+      currentUser = await loadProfileFromSupabase(data.user.id);
+      authenticated = !!currentUser;
+      cacheProfile(currentUser);
+      notify();
+      return currentUser;
+    }
+    if (password.length < 4) throw new Error('Password must be at least 4 characters');
+    currentUser = { ...clone(DEMO_USER), email };
+    authenticated = true;
+    writeAuth({ email });
+    notify();
+    return currentUser;
+  },
+
+  register: async (data) => {
+    if (!data?.email || !data?.full_name) throw new Error('Name and email are required');
+    if (!data?.password || data.password.length < 4) throw new Error('Password must be at least 4 characters');
+    if (isSupabaseEnabled) {
+      const { data: result, error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: { full_name: data.full_name },
+          emailRedirectTo: `${window.location.origin}/auth/verify`,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (!result.session) {
+        throw new Error('Account created — check your email to confirm before signing in.');
+      }
+      currentUser = await loadProfileFromSupabase(result.user.id);
+      authenticated = !!currentUser;
+      cacheProfile(currentUser);
+      notify();
+      return currentUser;
+    }
+    currentUser = { ...clone(DEMO_USER), email: data.email, full_name: data.full_name };
+    authenticated = true;
+    writeAuth({ email: data.email, full_name: data.full_name });
+    notify();
+    return currentUser;
+  },
+
+  logout: async () => {
+    currentUser = null;
+    authenticated = false;
+    notify();
+    if (isSupabaseEnabled) {
+      try { await supabase.auth.signOut({ scope: 'local' }); }
+      catch (err) { console.warn('[Auth] local signOut error (ignored):', err); }
+      supabase.auth.signOut({ scope: 'global' }).catch(() => {});
+      // Belt-and-suspenders: supabase-js sometimes leaves the session token
+      // in localStorage after a failed/incomplete refresh, which can wedge a
+      // future page load. Clear any sb-* keys to guarantee a clean slate.
+      try {
+        Object.keys(localStorage)
+          .filter(k => k.startsWith('sb-'))
+          .forEach(k => localStorage.removeItem(k));
+      } catch {}
+      return;
+    }
+    writeAuth(null);
+  },
+
+  socialAuth: async (provider) => {
+    if (isSupabaseEnabled) {
+      if (provider === 'email') return null;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: `${window.location.origin}/` },
+      });
+      if (error) throw new Error(error.message);
+      return null;
+    }
+    currentUser = clone(DEMO_USER);
+    authenticated = true;
+    writeAuth({ provider });
+    notify();
+    return currentUser;
+  },
+
+  resetPassword: async (email) => {
+    if (!email) throw new Error('Enter your email');
+    if (isSupabaseEnabled) {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset`,
+      });
+      if (error) throw new Error(error.message);
+      return { success: true };
+    }
+    return { success: true };
+  },
+
+  updatePassword: async (newPassword) => {
+    if (!isSupabaseEnabled) return { success: true };
+    if (!newPassword || newPassword.length < 4) {
+      throw new Error('Password must be at least 4 characters');
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw new Error(error.message);
+    return { success: true };
+  },
+};
+
+// ── Mode (closer / seller view toggle) ───────────────────────────
+const MODE_KEY = 'middleman_mode';
+const validMode = (m) => (m === 'closer' || m === 'seller' ? m : 'closer');
+let currentMode = validMode(typeof localStorage !== 'undefined' ? localStorage.getItem(MODE_KEY) : 'closer');
+export const Mode = {
+  get: () => currentMode,
+  set: (mode) => {
+    const next = validMode(mode);
+    if (next === currentMode) return;
+    currentMode = next;
+    try { localStorage.setItem(MODE_KEY, next); } catch {}
+    notify();
+  },
+  toggle: () => Mode.set(currentMode === 'closer' ? 'seller' : 'closer'),
+};
+
+// ── Listings ─────────────────────────────────────────────────────
 export const Listings = {
   getAll: () => listings,
   getById: (id) => listings.find(l => l.id === id),
+
   create: async (data) => {
+    if (isSupabaseEnabled) {
+      if (!currentUser?.id) throw new Error('Sign in first');
+      const { data: row, error } = await supabase
+        .from('listings')
+        .insert({
+          seller_id: currentUser.id,
+          title: data.title,
+          description: data.description || null,
+          category: data.category,
+          condition: data.condition,
+          price_cents: dollarsToCents(data.price),
+          commission_bps: pctToBps(data.commission),
+          location: data.location || null,
+          photos: data.photos || [],
+        })
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      const ui = dbListingToUi(row);
+      listings = [ui, ...listings];
+      notify();
+      return ui;
+    }
     const item = {
       id: 'lst-' + Date.now(), seller_id: currentUser.id,
       ...data, status: 'open', claimed_by: null, claim_start: null, claim_end: null,
@@ -51,7 +527,16 @@ export const Listings = {
     notify();
     return item;
   },
+
   claim: async (listingId) => {
+    if (isSupabaseEnabled) {
+      const { data: row, error } = await supabase.rpc('claim_listing', { p_listing_id: listingId });
+      if (error) throw new Error(error.message);
+      const updated = dbListingToUi(Array.isArray(row) ? row[0] : row);
+      listings = listings.map(l => l.id === listingId ? updated : l);
+      notify();
+      return updated;
+    }
     listings = listings.map(l => {
       if (l.id !== listingId || l.status !== 'open') return l;
       const now = new Date();
@@ -61,7 +546,16 @@ export const Listings = {
     notify();
     return Listings.getById(listingId);
   },
+
   extend: async (listingId) => {
+    if (isSupabaseEnabled) {
+      const { data: row, error } = await supabase.rpc('extend_claim', { p_listing_id: listingId });
+      if (error) throw new Error(error.message);
+      const updated = dbListingToUi(Array.isArray(row) ? row[0] : row);
+      listings = listings.map(l => l.id === listingId ? updated : l);
+      notify();
+      return updated;
+    }
     listings = listings.map(l => {
       if (l.id !== listingId || l.claimed_by !== currentUser.id) return l;
       const end = new Date(new Date(l.claim_end).getTime() + 2 * 86400000);
@@ -70,20 +564,60 @@ export const Listings = {
     notify();
     return Listings.getById(listingId);
   },
+
   markSold: async (listingId) => {
+    if (isSupabaseEnabled) {
+      const { error } = await supabase.from('listings').update({ status: 'sold' }).eq('id', listingId);
+      if (error) console.warn('[Listings] markSold:', error.message);
+      listings = listings.map(l => l.id === listingId ? { ...l, status: 'sold' } : l);
+      notify();
+      return;
+    }
     listings = listings.map(l => l.id === listingId ? { ...l, status: 'sold' } : l);
     notify();
   },
-  incrementViews: (listingId) => {
+
+  incrementViews: async (listingId) => {
+    if (isSupabaseEnabled) {
+      // Optimistic local bump; server-side authoritative count is best-effort
+      // (we don't critically rely on it). RLS lets sellers update their own
+      // listings, so this only persists for owners — acceptable for an
+      // analytics counter. A proper RPC could be added later.
+      listings = listings.map(l => l.id === listingId ? { ...l, views: (l.views || 0) + 1 } : l);
+      return;
+    }
     listings = listings.map(l => l.id === listingId ? { ...l, views: (l.views || 0) + 1 } : l);
   },
 };
 
-// ── Closings ──
+// ── Closings ─────────────────────────────────────────────────────
 export const Closings = {
   getAll: () => closings,
   getById: (id) => closings.find(c => c.id === id),
+
   create: async ({ listingId, buyerName, buyerEmail, agreedPrice }) => {
+    if (isSupabaseEnabled) {
+      const { data: row, error } = await supabase.rpc('create_closing', {
+        p_listing_id: listingId,
+        p_buyer_name: buyerName,
+        p_buyer_email: buyerEmail,
+        p_agreed_price_cents: dollarsToCents(agreedPrice),
+      });
+      if (error) throw new Error(error.message);
+      const ui = dbClosingToUi(Array.isArray(row) ? row[0] : row);
+      ui.stripe_checkout_url = `${window.location.origin}/pay/${ui.id}`;
+      closings = [ui, ...closings];
+      notify();
+      // Best-effort PaymentIntent mint. If both parties haven't connected
+      // Stripe yet, this fails — the closing still exists, the closer just
+      // needs to ensure both sides have onboarded before sharing the link.
+      try {
+        await callEdgeFunction('stripe-create-payment-intent', { closing_id: ui.id });
+      } catch (err) {
+        console.warn('[Closings] PaymentIntent mint deferred:', err.message);
+      }
+      return ui;
+    }
     const listing = Listings.getById(listingId);
     if (!listing) throw new Error('Listing not found');
     const closing = {
@@ -92,62 +626,188 @@ export const Closings = {
       buyer_name: buyerName, buyer_email: buyerEmail,
       agreed_price: agreedPrice, commission_rate: listing.commission, platform_fee_pct: 4,
       status: 'pending_payment',
-      stripe_payment_intent_id: null, stripe_checkout_url: 'https://checkout.stripe.com/demo-' + Date.now(),
+      stripe_payment_intent_id: null,
+      stripe_checkout_url: 'https://checkout.stripe.com/demo-' + Date.now(),
       created_at: new Date().toISOString(), completed_at: null,
     };
     closings = [closing, ...closings];
     notify();
     return closing;
   },
+
+  // Stripe-driven status transitions stay demo until the Stripe milestone.
+  // We persist the status updates to Postgres so they survive reload.
   simulatePayment: async (closingId) => {
+    if (isSupabaseEnabled) {
+      const { error } = await supabase.from('closings').update({ status: 'paid' }).eq('id', closingId);
+      if (error) throw new Error(error.message);
+      closings = closings.map(c => c.id === closingId ? { ...c, status: 'paid' } : c);
+      notify();
+      return;
+    }
     closings = closings.map(c => c.id === closingId ? { ...c, status: 'paid' } : c);
     notify();
   },
   confirmHandoff: async (closingId) => {
+    if (isSupabaseEnabled) {
+      // Verify the row count to catch the case where RLS silently filters the
+      // update to zero rows (e.g., user is not seller_id or closer_id).
+      const { data, error } = await supabase
+        .from('closings')
+        .update({ status: 'item_confirmed' })
+        .eq('id', closingId)
+        .select('id, status');
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) {
+        throw new Error('Could not update closing — you may not have permission.');
+      }
+      closings = closings.map(c => c.id === closingId ? { ...c, status: 'item_confirmed' } : c);
+      notify();
+      return;
+    }
     closings = closings.map(c => c.id === closingId ? { ...c, status: 'item_confirmed' } : c);
     notify();
   },
   complete: async (closingId) => {
+    if (isSupabaseEnabled) {
+      // Real Stripe path: edge function transfers seller payout + closer
+      // commission, then marks the closing completed and the listing sold.
+      const result = await callEdgeFunction('stripe-finalize-closing', { closing_id: closingId });
+      closings = closings.map(c => c.id === closingId
+        ? {
+            ...c,
+            status: 'completed',
+            completed_at: result.completed_at,
+          }
+        : c);
+      const closing = closings.find(c => c.id === closingId);
+      if (closing) {
+        // Listing was already marked sold in the edge function; sync local cache.
+        listings = listings.map(l => l.id === closing.listing_id ? { ...l, status: 'sold' } : l);
+      }
+      notify();
+      return;
+    }
     closings = closings.map(c => c.id === closingId ? { ...c, status: 'completed', completed_at: new Date().toISOString() } : c);
-    // Also mark listing as sold
     const closing = closings.find(c => c.id === closingId);
     if (closing) Listings.markSold(closing.listing_id);
     notify();
   },
   dispute: async (closingId) => {
+    if (isSupabaseEnabled) {
+      await supabase.from('closings').update({ status: 'disputed' }).eq('id', closingId);
+      closings = closings.map(c => c.id === closingId ? { ...c, status: 'disputed' } : c);
+      notify();
+      return;
+    }
     closings = closings.map(c => c.id === closingId ? { ...c, status: 'disputed' } : c);
     notify();
   },
 };
 
-// ── Chat ──
+// ── Chat (Postgres + realtime in Supabase mode; in-memory fallback) ──
 export const Chat = {
   getConversations: () => {
     return conversations.map(c => {
       const otherUserId = c.seller_id === currentUser?.id ? c.closer_id : c.seller_id;
-      const unread = messages.filter(m => m.conversation_id === c.id && m.sender_id !== currentUser?.id && !m.read).length;
-      return { ...c, otherUser: getUserById(otherUserId), listing: Listings.getById(c.listing_id), unreadCount: unread };
+      const unread = messages.filter(m =>
+        m.conversation_id === c.id && m.sender_id !== currentUser?.id && !m.read
+      ).length;
+      return {
+        ...c,
+        otherUser: getProfileFromCache(otherUserId),
+        listing: Listings.getById(c.listing_id),
+        unreadCount: unread,
+      };
     });
   },
+
   getMessages: (conversationId) => messages.filter(m => m.conversation_id === conversationId),
+
   sendMessage: async (conversationId, text) => {
+    if (!currentUser?.id) throw new Error('Sign in first');
+    if (isSupabaseEnabled) {
+      const { data: row, error } = await supabase
+        .from('messages')
+        .insert({ conversation_id: conversationId, sender_id: currentUser.id, text })
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      // Optimistic local append; realtime INSERT will dedupe via the id check.
+      if (!messages.some(m => m.id === row.id)) messages = [...messages, row];
+      // The conversation_last_message trigger updates the conversation row;
+      // refresh so the inbox reorders. Realtime will also catch this but
+      // the awaited refresh keeps the UI snappy.
+      loadConversations().then(notify);
+      notify();
+      return row;
+    }
     const msg = {
       id: 'msg-' + Date.now(), conversation_id: conversationId,
       sender_id: currentUser.id, text, read: true, created_at: new Date().toISOString(),
     };
     messages = [...messages, msg];
-    conversations = conversations.map(c => c.id === conversationId ? { ...c, last_message_text: text, last_message_at: msg.created_at } : c);
+    conversations = conversations.map(c => c.id === conversationId
+      ? { ...c, last_message_text: text, last_message_at: msg.created_at } : c);
     notify();
     return msg;
   },
+
   markRead: async (conversationId) => {
+    if (!currentUser?.id) return;
+    if (isSupabaseEnabled) {
+      // Mark all unread inbound messages in this conversation as read.
+      const { error } = await supabase
+        .from('messages')
+        .update({ read: true })
+        .eq('conversation_id', conversationId)
+        .neq('sender_id', currentUser.id)
+        .eq('read', false);
+      if (error) console.warn('[Chat] markRead:', error.message);
+      messages = messages.map(m =>
+        (m.conversation_id === conversationId && m.sender_id !== currentUser.id)
+          ? { ...m, read: true } : m
+      );
+      notify();
+      return;
+    }
     messages = messages.map(m =>
       m.conversation_id === conversationId && m.sender_id !== currentUser?.id ? { ...m, read: true } : m
     );
     notify();
   },
+
   startConversation: async (listingId, sellerId, closerId) => {
-    const existing = conversations.find(c => c.listing_id === listingId && c.seller_id === sellerId && c.closer_id === closerId);
+    if (!currentUser?.id) throw new Error('Sign in first');
+    // Caller must be one of the parties.
+    if (currentUser.id !== sellerId && currentUser.id !== closerId) {
+      throw new Error('You must be a party to this conversation');
+    }
+    if (isSupabaseEnabled) {
+      const existing = conversations.find(c =>
+        c.listing_id === listingId && c.seller_id === sellerId && c.closer_id === closerId
+      );
+      if (existing) return existing;
+      // Insert with onConflict on the unique (listing_id, seller_id, closer_id)
+      // so simultaneous "Start chat" clicks from both parties don't error out.
+      const { data: row, error } = await supabase
+        .from('conversations')
+        .upsert(
+          { listing_id: listingId, seller_id: sellerId, closer_id: closerId },
+          { onConflict: 'listing_id,seller_id,closer_id', ignoreDuplicates: false }
+        )
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      if (!conversations.some(c => c.id === row.id)) {
+        conversations = [row, ...conversations];
+      }
+      notify();
+      return row;
+    }
+    const existing = conversations.find(c =>
+      c.listing_id === listingId && c.seller_id === sellerId && c.closer_id === closerId
+    );
     if (existing) return existing;
     const conv = {
       id: 'conv-' + Date.now(), listing_id: listingId,
@@ -158,36 +818,82 @@ export const Chat = {
     notify();
     return conv;
   },
+
   getTotalUnread: () => {
-    return messages.filter(m => m.sender_id !== currentUser?.id && !m.read).length;
+    return messages.filter(m =>
+      m.sender_id !== currentUser?.id && !m.read
+    ).length;
   },
 };
 
-// ── Reviews ──
+// ── Reviews ──────────────────────────────────────────────────────
 export const Reviews = {
   getForCloser: (closerId) => reviews.filter(r => r.closer_id === closerId),
   getForSeller: (sellerId) => reviews.filter(r => r.seller_id === sellerId),
+
   submit: async ({ listingId, sellerId, closerId, stars, text }) => {
+    if (isSupabaseEnabled) {
+      const { data: row, error } = await supabase
+        .from('reviews')
+        .insert({ listing_id: listingId, seller_id: sellerId, closer_id: closerId, stars, text })
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      const ui = dbReviewToUi(row);
+      reviews = [ui, ...reviews];
+      notify();
+      return ui;
+    }
     const review = {
       id: 'rev-' + Date.now(), listing_id: listingId,
-      seller_id: sellerId, closer_id: closerId,
-      stars, text, created_at: new Date().toISOString(),
+      seller_id: sellerId, closer_id: closerId, stars, text,
+      created_at: new Date().toISOString(),
     };
     reviews = [...reviews, review];
     notify();
     return review;
   },
+
   getPending: (sellerId) => {
     const soldListings = listings.filter(l => l.seller_id === sellerId && l.status === 'sold');
     return soldListings.filter(l => !reviews.find(r => r.listing_id === l.id && r.seller_id === sellerId));
   },
 };
 
-// ── Profile ──
+// ── Profile ──────────────────────────────────────────────────────
 export const Profile = {
-  get: (userId) => getUserById(userId) || currentUser,
-  update: async (data) => { currentUser = { ...currentUser, ...data }; notify(); return currentUser; },
+  get: (userId) => getProfileFromCache(userId) || currentUser,
+  update: async (data) => {
+    if (isSupabaseEnabled && currentUser?.id) {
+      const { data: row, error } = await supabase
+        .from('profiles')
+        .update(data)
+        .eq('id', currentUser.id)
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      currentUser = row;
+      cacheProfile(row);
+      notify();
+      return currentUser;
+    }
+    currentUser = { ...currentUser, ...data };
+    notify();
+    return currentUser;
+  },
   uploadPhoto: async (file) => {
+    if (isSupabaseEnabled && currentUser?.id) {
+      const ext = (file.name?.split('.').pop() || 'jpg').toLowerCase();
+      const path = `${currentUser.id}/avatar-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { contentType: file.type, upsert: true });
+      if (upErr) throw new Error(upErr.message);
+      const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
+      const url = pub.publicUrl;
+      await Profile.update({ photo_url: url });
+      return url;
+    }
     const url = URL.createObjectURL(file);
     currentUser = { ...currentUser, photo_url: url };
     notify();
@@ -195,56 +901,190 @@ export const Profile = {
   },
 };
 
-// ── Watchlist ──
+// ── Watchlist ────────────────────────────────────────────────────
 export const Watchlist = {
-  get: () => watchlist.filter(w => w.user_id === currentUser?.id).map(w => ({ ...w, listing: Listings.getById(w.listing_id) })),
+  get: () => watchlist
+    .filter(w => w.user_id === currentUser?.id)
+    .map(w => ({ ...w, listing: Listings.getById(w.listing_id) })),
   isInWatchlist: (listingId) => watchlist.some(w => w.user_id === currentUser?.id && w.listing_id === listingId),
+  getNotify: (listingId) => watchlist.find(w => w.user_id === currentUser?.id && w.listing_id === listingId)?.notify || false,
+
   add: async (listingId) => {
     if (Watchlist.isInWatchlist(listingId)) return;
+    if (isSupabaseEnabled) {
+      if (!currentUser?.id) return;
+      const { data: row, error } = await supabase
+        .from('watchlist')
+        .insert({ user_id: currentUser.id, listing_id: listingId, notify: false })
+        .select()
+        .single();
+      if (error) { console.warn('[Watchlist] add:', error.message); return; }
+      watchlist = [...watchlist, row];
+      notify();
+      return;
+    }
     watchlist = [...watchlist, { id: 'wl-' + Date.now(), user_id: currentUser.id, listing_id: listingId, notify: false }];
     notify();
   },
+
   remove: async (listingId) => {
+    if (isSupabaseEnabled) {
+      if (!currentUser?.id) return;
+      const { error } = await supabase
+        .from('watchlist')
+        .delete()
+        .eq('user_id', currentUser.id)
+        .eq('listing_id', listingId);
+      if (error) console.warn('[Watchlist] remove:', error.message);
+      watchlist = watchlist.filter(w => !(w.user_id === currentUser.id && w.listing_id === listingId));
+      notify();
+      return;
+    }
     watchlist = watchlist.filter(w => !(w.user_id === currentUser?.id && w.listing_id === listingId));
     notify();
   },
+
   setNotify: async (listingId, enabled) => {
+    if (isSupabaseEnabled) {
+      if (!currentUser?.id) return;
+      const { error } = await supabase
+        .from('watchlist')
+        .update({ notify: enabled })
+        .eq('user_id', currentUser.id)
+        .eq('listing_id', listingId);
+      if (error) console.warn('[Watchlist] setNotify:', error.message);
+      watchlist = watchlist.map(w =>
+        (w.user_id === currentUser.id && w.listing_id === listingId) ? { ...w, notify: enabled } : w
+      );
+      notify();
+      return;
+    }
     watchlist = watchlist.map(w =>
       w.user_id === currentUser?.id && w.listing_id === listingId ? { ...w, notify: enabled } : w
     );
     notify();
   },
-  getNotify: (listingId) => watchlist.find(w => w.user_id === currentUser?.id && w.listing_id === listingId)?.notify || false,
 };
 
-// ── Stripe (demo stubs) ──
+// ── Stripe ───────────────────────────────────────────────────────
+// All Stripe operations go through Supabase Edge Functions so the secret key
+// never leaves the server. The browser only ever holds the publishable key.
+async function callEdgeFunction(name, body = {}) {
+  if (!isSupabaseEnabled) throw new Error('Stripe requires Supabase to be configured');
+  const { data, error } = await supabase.functions.invoke(name, { body });
+  if (error) {
+    // supabase-js wraps non-2xx responses; the body lives at error.context.
+    let msg = error.message;
+    try {
+      const parsed = await error.context?.json();
+      if (parsed?.error) msg = parsed.error;
+    } catch {}
+    throw new Error(msg);
+  }
+  return data;
+}
+
 export const Stripe = {
-  getConnectUrl: () => 'https://connect.stripe.com/setup/demo',
-  getAccountStatus: () => ({ enabled: currentUser?.stripe_payouts_enabled }),
-  getDashboardUrl: () => 'https://dashboard.stripe.com/demo',
+  // Kicks off Connect onboarding. Returns a Stripe-hosted onboarding URL —
+  // the caller window.location.assign() to it. After the user completes
+  // onboarding, Stripe redirects them back to `return_url`.
+  getConnectOnboardingLink: async ({ returnUrl, refreshUrl } = {}) => {
+    const data = await callEdgeFunction('stripe-connect-onboard', {
+      return_url: returnUrl || `${window.location.origin}/profile`,
+      refresh_url: refreshUrl || `${window.location.origin}/profile`,
+    });
+    return data; // { url, account_id }
+  },
+
+  // Returns whether the current user has connected Stripe and is payout-ready.
+  // We use a cached field on the profile row; Stripe webhook (account.updated)
+  // would be the authoritative source for `payouts_enabled` — wire that next.
+  getAccountStatus: () => ({
+    connected: !!currentUser?.stripe_account_id,
+    enabled: !!currentUser?.stripe_payouts_enabled,
+    accountId: currentUser?.stripe_account_id || null,
+  }),
+
+  // Closer / seller calls this to mint a PaymentIntent for a closing. Returns
+  // the client_secret which the buyer's checkout page uses with Stripe Elements.
+  createPaymentIntent: async (closingId) => {
+    return callEdgeFunction('stripe-create-payment-intent', { closing_id: closingId });
+  },
+
+  // After both parties confirm handoff, this issues the seller + closer
+  // transfers and marks the closing complete. Replaces the old
+  // Closings.complete demo flow.
+  finalizeClosing: async (closingId) => {
+    return callEdgeFunction('stripe-finalize-closing', { closing_id: closingId });
+  },
+
+  // Public buyer checkout URL for a closing.
+  getCheckoutUrl: (closingId) => `${window.location.origin}/pay/${closingId}`,
+
+  // Stripe Express dashboard URL for a connected user. Stripe-hosted, opens
+  // in a new tab. The link is generated server-side; for now we just point
+  // at the Stripe dashboard root and the user signs in there.
+  getDashboardUrl: () => 'https://dashboard.stripe.com/',
 };
 
-// ── Notifications ──
+// ── Notifications ────────────────────────────────────────────────
 export const Notifications = {
-  get: () => notifications.filter(n => n.user_id === currentUser?.id).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
+  get: () => notifications.filter(n => n.user_id === currentUser?.id),
   getUnreadCount: () => notifications.filter(n => n.user_id === currentUser?.id && !n.read).length,
+
   markRead: async (id) => {
+    if (isSupabaseEnabled) {
+      const { error } = await supabase.from('notifications').update({ read: true }).eq('id', id);
+      if (error) console.warn('[Notifications] markRead:', error.message);
+      notifications = notifications.map(n => n.id === id ? { ...n, read: true } : n);
+      notify();
+      return;
+    }
     notifications = notifications.map(n => n.id === id ? { ...n, read: true } : n);
     notify();
   },
   markAllRead: async () => {
+    if (isSupabaseEnabled) {
+      if (!currentUser?.id) return;
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', currentUser.id)
+        .eq('read', false);
+      if (error) console.warn('[Notifications] markAllRead:', error.message);
+      notifications = notifications.map(n => n.user_id === currentUser.id ? { ...n, read: true } : n);
+      notify();
+      return;
+    }
     notifications = notifications.map(n => n.user_id === currentUser?.id ? { ...n, read: true } : n);
     notify();
   },
   clear: async () => {
+    if (isSupabaseEnabled) {
+      if (!currentUser?.id) return;
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', currentUser.id);
+      if (error) console.warn('[Notifications] clear:', error.message);
+      notifications = notifications.filter(n => n.user_id !== currentUser.id);
+      notify();
+      return;
+    }
     notifications = notifications.filter(n => n.user_id !== currentUser?.id);
     notify();
   },
+  // add() is demo-only; real notifications are inserted server-side by RPCs
+  // and arrive via realtime. Kept here for the demo path.
   add: (notif) => {
-    notifications = [{ id: 'notif-' + Date.now(), user_id: currentUser?.id, read: false, created_at: new Date().toISOString(), ...notif }, ...notifications];
+    if (isSupabaseEnabled) return;
+    notifications = [{
+      id: 'notif-' + Date.now(), user_id: currentUser?.id, read: false,
+      created_at: new Date().toISOString(), ...notif,
+    }, ...notifications];
     notify();
   },
 };
 
-const Services = { Auth, Listings, Closings, Chat, Reviews, Profile, Watchlist, Stripe, Notifications };
+const Services = { Auth, Mode, Listings, Closings, Chat, Reviews, Profile, Watchlist, Stripe, Notifications };
 export default Services;

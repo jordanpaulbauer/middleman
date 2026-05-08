@@ -4,6 +4,7 @@ import { Plus, Users, DollarSign, ShoppingBag, MessageCircle, Eye, Tag, Clock, S
 import { Listings, Closings, Reviews, Auth, Chat } from '../services';
 import { getUserById, formatMoney, formatDate, formatTimeAgo } from '../data/demo';
 import CountdownTimer, { CountdownProgress } from '../components/CountdownTimer';
+import Seo from '../components/Seo';
 
 export default function SellerDashboard({ onOpenChat }) {
   const navigate = useNavigate();
@@ -53,6 +54,7 @@ export default function SellerDashboard({ onOpenChat }) {
 
   return (
     <div className="page">
+      <Seo title="Seller dashboard" noIndex />
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <div className="page-title">Seller Dashboard</div>
