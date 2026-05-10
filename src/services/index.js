@@ -563,12 +563,34 @@ export const Listings = {
 
   claim: async (listingId) => {
     if (isSupabaseEnabled) {
-      const { data: row, error } = await supabase.rpc('claim_listing', { p_listing_id: listingId });
-      if (error) throw new Error(error.message);
-      const updated = dbListingToUi(Array.isArray(row) ? row[0] : row);
-      listings = listings.map(l => l.id === listingId ? updated : l);
-      notify();
-      return updated;
+      const original = listings.find(l => l.id === listingId);
+      const now = new Date();
+      const end = new Date(now.getTime() + 7 * 86400000);
+      const optimistic = original ? {
+        ...original,
+        status: 'claimed',
+        claimed_by: currentUser?.id,
+        claim_start: now.toISOString(),
+        claim_end: end.toISOString(),
+      } : null;
+      if (optimistic) {
+        listings = listings.map(l => l.id === listingId ? optimistic : l);
+        notify();
+      }
+      try {
+        const { data: row, error } = await supabase.rpc('claim_listing', { p_listing_id: listingId });
+        if (error) throw new Error(error.message);
+        const updated = dbListingToUi(Array.isArray(row) ? row[0] : row);
+        listings = listings.map(l => l.id === listingId ? updated : l);
+        notify();
+        return updated;
+      } catch (err) {
+        if (original) {
+          listings = listings.map(l => l.id === listingId ? original : l);
+          notify();
+        }
+        throw err;
+      }
     }
     listings = listings.map(l => {
       if (l.id !== listingId || l.status !== 'open') return l;
