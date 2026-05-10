@@ -118,6 +118,29 @@ const writeAuth = (val) => {
   try { if (val) localStorage.setItem(AUTH_KEY, JSON.stringify(val)); else localStorage.removeItem(AUTH_KEY); } catch {}
 };
 
+// Race a promise against a timeout. Used to detect a wedged supabase-js
+// client (stale localStorage tokens cause getSession() to hang forever)
+// so we can self-heal instead of leaving the user staring at a spinner.
+function withTimeout(promise, ms, label) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
+
+// Nukes any sb-* keys supabase-js wrote to localStorage. Called when we
+// detect a wedged client so the next getSession() returns cleanly.
+function clearSupabaseAuthStorage() {
+  try {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('sb-'))
+      .forEach(k => localStorage.removeItem(k));
+  } catch {}
+}
+
 const persisted = !isSupabaseEnabled && typeof localStorage !== 'undefined' ? readAuth() : null;
 let authenticated = !!persisted;
 if (persisted && currentUser) currentUser = { ...currentUser, ...persisted };
@@ -315,7 +338,25 @@ if (import.meta.hot) {
 let authStateSub = null;
 if (isSupabaseEnabled) {
   (async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    // Self-healing session restore: if supabase-js wedges on a stale token
+    // (happens after broken signups or killed-mid-auth tabs), getSession()
+    // hangs forever. Race it against a 5s timeout. If it loses, clear the
+    // sb-* keys and try once more — the second call returns null cleanly
+    // and the user sees the login screen instead of an infinite spinner.
+    let session = null;
+    try {
+      const result = await withTimeout(supabase.auth.getSession(), 5000, 'getSession');
+      session = result?.data?.session || null;
+    } catch (err) {
+      console.warn('[Auth] session restore wedged, clearing stale tokens:', err.message);
+      clearSupabaseAuthStorage();
+      try {
+        const retry = await withTimeout(supabase.auth.getSession(), 5000, 'getSession (retry)');
+        session = retry?.data?.session || null;
+      } catch (err2) {
+        console.warn('[Auth] retry also failed; continuing without session');
+      }
+    }
     if (session?.user) {
       currentUser = await loadProfileFromSupabase(session.user.id);
       authenticated = !!currentUser;
@@ -369,7 +410,23 @@ export const Auth = {
     if (isSupabaseEnabled) {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw new Error(error.message);
-      currentUser = await loadProfileFromSupabase(data.user.id);
+      // Profile fetch is normally fast (<200ms). If it hangs >8s the
+      // supabase-js client is wedged — fall back to a minimal user from
+      // auth metadata so login still completes. onAuthStateChange will
+      // refresh the profile properly once the client recovers.
+      try {
+        currentUser = await withTimeout(loadProfileFromSupabase(data.user.id), 8000, 'profile load');
+      } catch (err) {
+        console.warn('[Auth] post-login profile fetch wedged, using auth metadata:', err.message);
+        currentUser = {
+          id: data.user.id,
+          email: data.user.email,
+          full_name: data.user.user_metadata?.full_name
+            || data.user.email?.split('@')[0]
+            || 'New user',
+          photo_url: null,
+        };
+      }
       authenticated = !!currentUser;
       cacheProfile(currentUser);
       notify();
