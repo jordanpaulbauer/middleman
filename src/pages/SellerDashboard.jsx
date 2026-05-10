@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Users, DollarSign, ShoppingBag, MessageCircle, Eye, Tag, Clock, Star } from 'lucide-react';
-import { Listings, Closings, Reviews, Auth, Chat } from '../services';
+import { Plus, Users, DollarSign, ShoppingBag, MessageCircle, Eye, Tag, Clock, Star, Edit3, Trash2 } from 'lucide-react';
+import { Listings, Closings, Reviews, Auth, Chat, Profile } from '../services';
 import { getUserById, formatMoney, formatDate, formatTimeAgo } from '../data/demo';
 import CountdownTimer, { CountdownProgress } from '../components/CountdownTimer';
 import Seo from '../components/Seo';
+import EditListingModal from '../components/EditListingModal';
+import { useToast } from '../hooks/useToast';
 
 export default function SellerDashboard({ onOpenChat }) {
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const [tab, setTab] = useState('listings');
   const [showReviewModal, setShowReviewModal] = useState(null);
+  const [editingListing, setEditingListing] = useState(null);
   const [reviewStars, setReviewStars] = useState(5);
   const [reviewText, setReviewText] = useState('');
   const [, setTick] = useState(0);
@@ -87,7 +91,7 @@ export default function SellerDashboard({ onOpenChat }) {
               <button className="btn btn-primary" onClick={() => navigate('/post')}>Post Listing</button>
             </div>
           ) : myListings.map(l => {
-            const closer = l.claimed_by ? getUserById(l.claimed_by) : null;
+            const closer = l.claimed_by ? Profile.get(l.claimed_by) : null;
             const isClaimed = l.status === 'claimed' || l.status === 'negotiating';
             const commCost = Math.round(l.price * l.commission / 100);
             return (
@@ -95,11 +99,38 @@ export default function SellerDashboard({ onOpenChat }) {
                 <div style={{ display: 'flex', gap: 16 }}>
                   <img src={l.photos?.[0]} alt="" style={{ width: 100, height: 75, borderRadius: 8, objectFit: 'cover' }} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <div style={{ fontWeight: 600, fontSize: 16 }}>{l.title}</div>
-                      <span className={`badge ${l.status === 'open' ? 'badge-green' : l.status === 'sold' ? 'badge-grey' : 'badge-orange'}`}>
-                        {l.status === 'open' ? 'Available' : l.status === 'sold' ? 'Sold' : 'Claimed'}
-                      </span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                      <div style={{ fontWeight: 600, fontSize: 16, minWidth: 0, flex: 1 }}>{l.title}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {l.status === 'open' && (
+                          <>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              title="Edit listing"
+                              onClick={() => setEditingListing(l)}
+                              style={{ padding: 6 }}
+                            ><Edit3 size={14} /></button>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              title="Delete listing"
+                              onClick={async () => {
+                                if (!window.confirm(`Delete "${l.title}"? This can't be undone.`)) return;
+                                try {
+                                  await Listings.remove(l.id);
+                                  addToast({ type: 'success', title: 'Listing deleted' });
+                                  setTick(t => t + 1);
+                                } catch (err) {
+                                  addToast({ type: 'error', title: 'Could not delete', message: err?.message });
+                                }
+                              }}
+                              style={{ padding: 6, color: 'var(--red)' }}
+                            ><Trash2 size={14} /></button>
+                          </>
+                        )}
+                        <span className={`badge ${l.status === 'open' ? 'badge-green' : l.status === 'sold' ? 'badge-grey' : 'badge-orange'}`}>
+                          {l.status === 'open' ? 'Available' : l.status === 'sold' ? 'Sold' : 'Claimed'}
+                        </span>
+                      </div>
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
                       {formatMoney(l.price)} · Commission cost: {formatMoney(commCost)}
@@ -215,6 +246,18 @@ export default function SellerDashboard({ onOpenChat }) {
             </div>
           </div>
         </div>
+      )}
+
+      {editingListing && (
+        <EditListingModal
+          listing={editingListing}
+          onClose={() => setEditingListing(null)}
+          onSaved={() => {
+            addToast({ type: 'success', title: 'Listing updated' });
+            setEditingListing(null);
+            setTick(t => t + 1);
+          }}
+        />
       )}
     </div>
   );

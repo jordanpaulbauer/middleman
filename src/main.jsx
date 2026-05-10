@@ -4,7 +4,11 @@ import { BrowserRouter } from 'react-router-dom'
 import { HelmetProvider } from 'react-helmet-async'
 import App from './App'
 import ErrorBoundary from './components/ErrorBoundary'
+import { initSentry } from './lib/sentry'
 import './index.css'
+
+// Initialize error tracking before React renders so we catch boot-time errors.
+initSentry();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

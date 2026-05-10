@@ -1,4 +1,5 @@
 import React from 'react';
+import { Sentry } from '../lib/sentry';
 
 // React requires class components for componentDidCatch / getDerivedStateFromError.
 // Catches any render error in the tree below and shows a recoverable fallback.
@@ -10,7 +11,10 @@ export default class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    // In production this is where Sentry.captureException would go.
+    // Report to Sentry (no-op if DSN isn't configured).
+    Sentry?.captureException?.(error, {
+      contexts: { react: { componentStack: info?.componentStack } },
+    });
     if (import.meta.env.DEV) {
       console.error('[ErrorBoundary]', error, info?.componentStack);
     }

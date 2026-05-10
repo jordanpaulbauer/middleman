@@ -324,6 +324,42 @@ function SettingsModal({ user, onClose, onSave }) {
               <ToggleRow label="Push notifications" defaultOn />
               <ToggleRow label="Marketing emails" defaultOn={false} />
             </Section>
+
+            <Section title="Danger Zone" status="warning">
+              <div style={{
+                padding: '14px 16px',
+                background: 'var(--red-light)',
+                borderRadius: 10,
+                border: '1px solid var(--red)',
+              }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--red)' }}>
+                  Delete my account
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 12 }}>
+                  Permanently removes your profile, listings, messages, and watchlist.
+                  Past completed deals stay in the audit log. This cannot be undone.
+                </div>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  style={{ borderColor: 'var(--red)', color: 'var(--red)' }}
+                  onClick={async () => {
+                    const confirmed = window.prompt(
+                      'Type DELETE to permanently remove your account.'
+                    );
+                    if (confirmed !== 'DELETE') return;
+                    try {
+                      await Auth.deleteAccount();
+                      addToast({ type: 'success', title: 'Account deleted' });
+                      window.location.assign('/');
+                    } catch (err) {
+                      addToast({ type: 'error', title: 'Could not delete account', message: err?.message });
+                    }
+                  }}
+                >
+                  Delete my account
+                </button>
+              </div>
+            </Section>
           </div>
         </div>
         <div className="modal-footer">

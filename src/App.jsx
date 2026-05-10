@@ -25,6 +25,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import AuthResetPage from './pages/AuthResetPage';
 import AuthVerifyPage from './pages/AuthVerifyPage';
 import PayPage from './pages/PayPage';
+import { setSentryUser } from './lib/sentry';
 
 // Routes that don't require auth — readable for SEO and shareable.
 // /auth/* is here too: the recovery + email-verify links land in a logged-out
@@ -47,8 +48,12 @@ export default function App() {
 
   useEffect(() => {
     const unsub = subscribe(() => {
-      setUser(Auth.getUser());
+      const next = Auth.getUser();
+      setUser(next);
       setTick(t => t + 1);
+      // Keep Sentry's user context in sync so error reports include the
+      // signed-in user. No-op when Sentry DSN isn't configured.
+      setSentryUser(next);
     });
     return unsub;
   }, []);

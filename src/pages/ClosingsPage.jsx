@@ -216,6 +216,31 @@ export default function ClosingsPage() {
                       {c.status === 'completed' && (
                         <span className="badge badge-green"><CheckCircle size={12} /> Completed {formatDate(c.completed_at)}</span>
                       )}
+                      {c.status === 'disputed' && (
+                        <span className="badge" style={{ background: 'var(--red-light)', color: 'var(--red)' }}>
+                          <AlertTriangle size={12} /> Disputed
+                        </span>
+                      )}
+                      {/* Either party can flag a problem on an in-flight closing */}
+                      {(c.status === 'paid' || c.status === 'item_confirmed') && (
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ color: 'var(--red)', marginLeft: 'auto' }}
+                          onClick={async () => {
+                            const reason = window.prompt('What\'s the issue? (will pause this deal pending review)');
+                            if (!reason || !reason.trim()) return;
+                            try {
+                              await Closings.dispute(c.id, reason.trim());
+                              addToast({ type: 'success', title: 'Dispute opened', message: 'Our team will review.' });
+                              setTick(t => t + 1);
+                            } catch (err) {
+                              addToast({ type: 'error', title: 'Could not open dispute', message: err?.message });
+                            }
+                          }}
+                        >
+                          <AlertTriangle size={14} /> Report problem
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}

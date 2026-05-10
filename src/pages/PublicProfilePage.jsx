@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { MapPin, Calendar, Star, Shield } from 'lucide-react';
-import { Reviews, Closings, Listings } from '../services';
-import { getUserById, formatMoney, formatDate } from '../data/demo';
+import { MapPin, Calendar, Star, Shield, Flag } from 'lucide-react';
+import { Reviews, Closings, Listings, Profile, Auth } from '../services';
+import { formatDate } from '../data/demo';
 import Seo from '../components/Seo';
+import ReportModal from '../components/ReportModal';
 import NotFoundPage from './NotFoundPage';
 
 export default function PublicProfilePage() {
   const { userId } = useParams();
-  const profile = getUserById(userId);
+  const profile = Profile.get(userId);
+  const [reporting, setReporting] = useState(false);
+  const me = Auth.getUser();
   if (!profile) return <NotFoundPage />;
 
   const reviews = Reviews.getForCloser(profile.id);
@@ -170,6 +173,36 @@ export default function PublicProfilePage() {
           </div>
         )}
       </section>
+
+      {/* Footer with Report (only show on someone else's profile, not yours) */}
+      {me?.id && me.id !== profile.id && (
+        <div style={{ marginTop: 32, textAlign: 'center' }}>
+          <button
+            onClick={() => setReporting(true)}
+            style={{
+              display: 'inline-flex', gap: 6, alignItems: 'center',
+              background: 'transparent', border: '1px solid var(--border)',
+              padding: '8px 14px', borderRadius: 999,
+              fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer',
+            }}
+          >
+            <Flag size={13} /> Report this user
+          </button>
+        </div>
+      )}
+
+      {reporting && (
+        <ReportModal
+          entityType="user"
+          entityId={profile.id}
+          entityLabel={profile.full_name}
+          onClose={() => setReporting(false)}
+          onSubmitted={() => {
+            setReporting(false);
+            window.alert('Report submitted. Our team will review.');
+          }}
+        />
+      )}
     </div>
   );
 }

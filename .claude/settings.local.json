@@ -39,7 +39,22 @@
       "Bash(python3 -c \"import json,sys; d=json.loads\\(sys.stdin.read\\(\\)\\)[0]['text']; r=json.loads\\(d\\); items=r.get\\('result',{}\\).get\\('result',[]\\); [print\\(item.get\\('timestamp',0\\), item.get\\('msg',''\\), item.get\\('path',''\\), item.get\\('status',''\\), item.get\\('error',''\\), '||', item.get\\('event_message',''\\)[:200]\\) for item in items[:30]]\")",
       "Bash(python3 -c \"import json,sys; d=json.loads\\(sys.stdin.read\\(\\)\\)[0]['text']; r=json.loads\\(d\\); items=r.get\\('result',{}\\).get\\('result',[]\\); [print\\(item.get\\('timestamp',0\\), '|', item.get\\('msg',''\\)[:60], '|', item.get\\('path',''\\)[:30], '|', item.get\\('error',''\\)[:60]\\) for item in items if 'signup' in item.get\\('path',''\\).lower\\(\\) or 'rate' in item.get\\('msg',''\\).lower\\(\\) or 'mail' in item.get\\('msg',''\\).lower\\(\\) or 'verify' in item.get\\('path',''\\).lower\\(\\)]\")",
       "Bash(python3 -c ' *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(git push *)",
+      "Bash(dig +short middlemanmarketplace.com)",
+      "Bash(dig +short www.middlemanmarketplace.com)",
+      "Bash(curl -sI -o /dev/null -w \"HTTP %{http_code} \\(final URL: %{url_effective}, redirected to: %{redirect_url}\\)\\\\n\" -L --max-time 8 https://middlemanmarketplace.com)",
+      "WebFetch(domain:middlemanmarketplace.com)",
+      "Bash(openssl s_client -servername middlemanmarketplace.com -connect middlemanmarketplace.com:443)",
+      "Bash(openssl x509 *)",
+      "Bash(curl -sI --max-time 5 https://middlemanmarketplace.com)",
+      "Bash(curl -sI --max-time 8 https://middlemanmarketplace.com)",
+      "Bash(curl -sI --max-time 8 https://www.middlemanmarketplace.com)",
+      "Bash(dig @8.8.8.8 +short middlemanmarketplace.com)",
+      "Bash(curl -sI --max-time 8 \"https://middlemanmarketplace.com/?cb=$\\(date +%s\\)\")",
+      "Bash(curl -sI --max-time 8 --resolve middlemanmarketplace.com:443:216.198.79.1 https://middlemanmarketplace.com)",
+      "Bash(grep -n \"</section>$\\\\|</section>\\\\s*$\" src/pages/PublicProfilePage.jsx)",
+      "Bash(grep -n \"showReviewModal && \\\\|^  \\);$\\\\|^}$\" src/pages/SellerDashboard.jsx)"
     ]
   }
 }

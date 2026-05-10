@@ -471,6 +471,39 @@ export const Auth = {
     if (error) throw new Error(error.message);
     return { success: true };
   },
+
+  // Permanent account deletion. Cascades remove the profile, listings,
+  // watchlist, notifications, etc. Closings tied to this user are not
+  // deleted (FK is RESTRICT) so the function refuses if any are active —
+  // the user must complete or refund those first.
+  deleteAccount: async () => {
+    if (!isSupabaseEnabled) {
+      // Demo: simulate a successful deletion + sign-out.
+      currentUser = null;
+      authenticated = false;
+      writeAuth(null);
+      notify();
+      return { success: true };
+    }
+    const { data, error } = await supabase.functions.invoke('delete-account', { body: {} });
+    if (error) {
+      let msg = error.message;
+      try {
+        const parsed = await error.context?.json();
+        if (parsed?.error) msg = parsed.error;
+      } catch {}
+      throw new Error(msg);
+    }
+    // Server already deleted the auth user; sign out locally to clear state.
+    try { await supabase.auth.signOut({ scope: 'local' }); } catch {}
+    try {
+      Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
+    } catch {}
+    currentUser = null;
+    authenticated = false;
+    notify();
+    return data || { success: true };
+  },
 };
 
 // ── Mode (closer / seller view toggle) ───────────────────────────
@@ -574,6 +607,66 @@ export const Listings = {
       return;
     }
     listings = listings.map(l => l.id === listingId ? { ...l, status: 'sold' } : l);
+    notify();
+  },
+
+  // Closer releases their claim back to the marketplace. Server enforces
+  // that no closing is in flight before unwinding.
+  withdraw: async (listingId) => {
+    if (isSupabaseEnabled) {
+      const { data, error } = await supabase.rpc('withdraw_claim', { p_listing_id: listingId });
+      if (error) throw new Error(error.message);
+      const updated = dbListingToUi(Array.isArray(data) ? data[0] : data);
+      listings = listings.map(l => l.id === listingId ? updated : l);
+      notify();
+      return updated;
+    }
+    listings = listings.map(l => l.id === listingId ? {
+      ...l, status: 'open', claimed_by: null, claim_start: null, claim_end: null,
+    } : l);
+    notify();
+  },
+
+  // Seller updates their own listing fields. RLS filters to listings.seller_id = auth.uid()
+  // so we don't need extra checks server-side.
+  update: async (listingId, updates) => {
+    if (isSupabaseEnabled) {
+      const dbUpdates = {};
+      if (updates.title !== undefined) dbUpdates.title = updates.title;
+      if (updates.description !== undefined) dbUpdates.description = updates.description;
+      if (updates.category !== undefined) dbUpdates.category = updates.category;
+      if (updates.condition !== undefined) dbUpdates.condition = updates.condition;
+      if (updates.price !== undefined) dbUpdates.price_cents = dollarsToCents(updates.price);
+      if (updates.commission !== undefined) dbUpdates.commission_bps = pctToBps(updates.commission);
+      if (updates.location !== undefined) dbUpdates.location = updates.location;
+      if (updates.photos !== undefined) dbUpdates.photos = updates.photos;
+      const { data, error } = await supabase
+        .from('listings')
+        .update(dbUpdates)
+        .eq('id', listingId)
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      const updated = dbListingToUi(data);
+      listings = listings.map(l => l.id === listingId ? updated : l);
+      notify();
+      return updated;
+    }
+    listings = listings.map(l => l.id === listingId ? { ...l, ...updates, updated_at: new Date().toISOString() } : l);
+    notify();
+  },
+
+  // Seller deletes their own listing. RLS allows delete only when status='open'
+  // (no claim, no closing) — protects against deleting a listing mid-deal.
+  remove: async (listingId) => {
+    if (isSupabaseEnabled) {
+      const { error } = await supabase.from('listings').delete().eq('id', listingId);
+      if (error) throw new Error(error.message);
+      listings = listings.filter(l => l.id !== listingId);
+      notify();
+      return;
+    }
+    listings = listings.filter(l => l.id !== listingId);
     notify();
   },
 
@@ -693,14 +786,24 @@ export const Closings = {
     if (closing) Listings.markSold(closing.listing_id);
     notify();
   },
-  dispute: async (closingId) => {
+  dispute: async (closingId, reason) => {
     if (isSupabaseEnabled) {
-      await supabase.from('closings').update({ status: 'disputed' }).eq('id', closingId);
-      closings = closings.map(c => c.id === closingId ? { ...c, status: 'disputed' } : c);
+      const { data, error } = await supabase
+        .from('closings')
+        .update({ status: 'disputed', dispute_reason: reason || null })
+        .eq('id', closingId)
+        .select('id, status');
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) {
+        throw new Error('Could not open dispute — you may not have permission.');
+      }
+      closings = closings.map(c => c.id === closingId
+        ? { ...c, status: 'disputed', dispute_reason: reason || null } : c);
       notify();
       return;
     }
-    closings = closings.map(c => c.id === closingId ? { ...c, status: 'disputed' } : c);
+    closings = closings.map(c => c.id === closingId
+      ? { ...c, status: 'disputed', dispute_reason: reason || null } : c);
     notify();
   },
 };

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { MapPin, Tag, Eye, ArrowLeft, Heart } from 'lucide-react';
-import { Listings, Watchlist, Auth } from '../services';
-import { getUserById, formatMoney } from '../data/demo';
+import { MapPin, Tag, Eye, ArrowLeft, Heart, Flag } from 'lucide-react';
+import { Listings, Watchlist, Auth, Profile } from '../services';
+import { formatMoney } from '../data/demo';
 import CountdownTimer from '../components/CountdownTimer';
 import Seo from '../components/Seo';
+import ReportModal from '../components/ReportModal';
 import NotFoundPage from './NotFoundPage';
 
 const STATUS_STYLES = {
@@ -19,12 +20,13 @@ export default function ListingPage({ onRequireAuth }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [, setTick] = useState(0);
+  const [reporting, setReporting] = useState(false);
   const user = Auth.getUser();
 
   const listing = Listings.getById(id);
   if (!listing) return <NotFoundPage />;
 
-  const seller = getUserById(listing.seller_id);
+  const seller = Profile.get(listing.seller_id);
   const payout = Math.round((listing.price || 0) * (listing.commission || 0) / 100);
   const photo = listing.photos?.[0];
   const status = STATUS_STYLES[listing.status] || STATUS_STYLES.open;
@@ -113,6 +115,17 @@ export default function ListingPage({ onRequireAuth }) {
             <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>{listing.condition}</span>
             {listing.location && <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}><MapPin size={15} /> {listing.location}</span>}
             <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}><Eye size={15} /> {listing.views || 0} views</span>
+            <button
+              onClick={() => user ? setReporting(true) : onRequireAuth?.()}
+              style={{
+                display: 'flex', gap: 6, alignItems: 'center',
+                background: 'transparent', border: 'none', padding: 0,
+                cursor: 'pointer', fontSize: 14, color: 'var(--text-muted)',
+              }}
+              title="Report this listing"
+            >
+              <Flag size={14} /> Report
+            </button>
           </div>
         </div>
 
@@ -217,6 +230,22 @@ export default function ListingPage({ onRequireAuth }) {
           )}
         </aside>
       </div>
+
+      {reporting && (
+        <ReportModal
+          entityType="listing"
+          entityId={listing.id}
+          entityLabel={listing.title}
+          onClose={() => setReporting(false)}
+          onSubmitted={() => {
+            setReporting(false);
+            // Use a tiny delay so toast renders after modal closes; toast hook
+            // is local, fall back to alert here for the public listing page
+            // since useToast isn't wired to this surface.
+            window.alert('Report submitted. Our team will review.');
+          }}
+        />
+      )}
     </div>
   );
 }

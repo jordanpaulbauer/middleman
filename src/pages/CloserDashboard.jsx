@@ -115,7 +115,7 @@ export default function CloserDashboard({ onOpenChat }) {
                       </div>
                       <CountdownProgress startDate={listing.claim_start} endDate={listing.claim_end} />
                     </div>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
                       {canExtend && (
                         <button className="btn btn-secondary btn-sm" onClick={() => handleExtend(listing.id)}>
                           💬 Negotiate (+2d)
@@ -126,6 +126,22 @@ export default function CloserDashboard({ onOpenChat }) {
                       </button>
                       <button className="btn btn-ghost btn-sm" onClick={() => handleMessage(listing)}>
                         <MessageCircle size={14} /> Message Seller
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        title="Release this claim back to the marketplace"
+                        style={{ marginLeft: 'auto', color: 'var(--text-muted)' }}
+                        onClick={async () => {
+                          if (!window.confirm(`Release claim on "${listing.title}"? Other closers will be able to claim it.`)) return;
+                          try {
+                            await Listings.withdraw(listing.id);
+                            setTick(t => t + 1);
+                          } catch (err) {
+                            window.alert(err?.message || 'Could not withdraw claim');
+                          }
+                        }}
+                      >
+                        Release claim
                       </button>
                     </div>
                   </div>
