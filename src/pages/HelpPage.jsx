@@ -9,7 +9,7 @@ export default function HelpPage() {
       sections={[
         {
           heading: 'How do I claim a listing?',
-          body: 'Open the listing from the Browse page and tap "Claim". You have a 7-day window to find a buyer and close the deal. You can extend by 2 days once if a buyer is mid-negotiation.',
+          body: 'Open the listing from the Home page and tap "Claim". You have a 7-day window to find a buyer and close the deal. You can extend by 2 days once if a buyer is mid-negotiation.',
         },
         {
           heading: 'When do I get paid?',

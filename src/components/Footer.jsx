@@ -14,7 +14,7 @@ export default function Footer() {
   };
 
   const marketplace = [
-    { label: 'Browse listings', onClick: () => goTo('/browse', 'closer') },
+    { label: 'Home', onClick: () => goTo('/browse', 'closer') },
     { label: 'Post a listing', onClick: () => goTo('/post', 'seller') },
     { label: 'Closings', onClick: () => navigate('/closings') },
     { label: 'Messages', onClick: () => navigate('/messages') },

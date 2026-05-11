@@ -69,7 +69,7 @@ export default function BrowsePage({ onOpenChat }) {
 
   return (
     <div className="page">
-      <Seo title="Browse listings" noIndex />
+      <Seo title="Home" noIndex />
       {/* ── Category pill bar ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10,

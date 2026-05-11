@@ -6,7 +6,7 @@ import NotificationDropdown from './NotificationDropdown';
 import { useIsNarrow } from '../hooks/useMediaQuery';
 
 const CLOSER_TABS = [
-  { to: '/browse', label: 'Browse' },
+  { to: '/browse', label: 'Home' },
   { to: '/closer', label: 'Dashboard' },
   { to: '/closings', label: 'Closings' },
 ];
