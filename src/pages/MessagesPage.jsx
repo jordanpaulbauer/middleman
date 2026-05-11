@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Search, Send, MoreHorizontal, ImageIcon, Smile, ExternalLink, ArrowLeft } from 'lucide-react';
-import { Auth, Chat } from '../services';
+import { Auth, Chat, subscribe } from '../services';
 import { formatTimeAgo } from '../data/demo';
 import Seo from '../components/Seo';
 import { useIsMobile, useIsNarrow } from '../hooks/useMediaQuery';
+import { useToast } from '../hooks/useToast';
 
 const NAV_HEIGHT_DESKTOP = 80;
 const NAV_HEIGHT_NARROW = 64;
@@ -23,6 +24,7 @@ export default function MessagesPage() {
   const [input, setInput] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [, setTick] = useState(0);
+  const { addToast } = useToast();
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const isMobile = useIsMobile();
@@ -81,6 +83,10 @@ export default function MessagesPage() {
     }
   }, [activeConvId, filtered, isMobile]);
 
+  // Re-render whenever the services cache changes — covers realtime message
+  // inserts from the other party as well as updates we trigger ourselves.
+  useEffect(() => subscribe(() => setTick(t => t + 1)), []);
+
   const activeConv = enriched.find(c => c.id === activeConvId);
   const messages = activeConvId ? Chat.getMessages(activeConvId) : [];
 
@@ -99,11 +105,24 @@ export default function MessagesPage() {
     }
   }, [activeConvId]);
 
-  const handleSend = () => {
-    if (!input.trim() || !activeConvId) return;
-    Chat.sendMessage(activeConvId, input.trim());
+  const handleSend = async () => {
+    const text = input.trim();
+    if (!text || !activeConvId) return;
+    // Clear input immediately so the user sees their send acknowledged. The
+    // network roundtrip is fast (~150ms) but blocking the input would feel
+    // sluggish. If the insert fails we restore the text + surface a toast.
     setInput('');
-    setTick(t => t + 1);
+    try {
+      await Chat.sendMessage(activeConvId, text);
+      setTick(t => t + 1);
+    } catch (err) {
+      setInput(text);
+      addToast({
+        type: 'error',
+        title: 'Could not send message',
+        message: err?.message || 'Try again in a moment.',
+      });
+    }
   };
 
   // Layout: 3-pane on desktop, 2-pane on narrow (no listing rail), 1-pane on mobile.
