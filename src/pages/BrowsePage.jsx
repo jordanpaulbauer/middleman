@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Search, X, Heart, Flame, Eye, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Listings, Watchlist } from '../services';
+import { Search, X, Heart, Flame, Eye, Clock, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react';
+import { Listings, Watchlist, Admin } from '../services';
 import { getUserById, formatMoney, CATEGORIES } from '../data/demo';
 import CountdownTimer from '../components/CountdownTimer';
 import ListingDetailModal from '../components/ListingDetailModal';
+import AdminRemoveListingModal from '../components/AdminRemoveListingModal';
 import Seo from '../components/Seo';
 
 const SORTS = [
@@ -22,7 +23,9 @@ export default function BrowsePage({ onOpenChat }) {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sort, setSort] = useState('trending');
   const [selectedListing, setSelectedListing] = useState(null);
+  const [adminRemoveTarget, setAdminRemoveTarget] = useState(null);
   const [, setTick] = useState(0);
+  const isAdmin = Admin.isAdmin();
 
   const allListings = Listings.getAll();
 
@@ -156,7 +159,9 @@ export default function BrowsePage({ onOpenChat }) {
           {filtered.map(listing => (
             <ListingCard key={listing.id} listing={listing}
               onClick={() => handleCardClick(listing)}
-              onToggleWatchlist={toggleWatchlist} />
+              onToggleWatchlist={toggleWatchlist}
+              isAdmin={isAdmin}
+              onAdminRemove={() => setAdminRemoveTarget(listing)} />
           ))}
         </div>
       )}
@@ -169,11 +174,19 @@ export default function BrowsePage({ onOpenChat }) {
           onRefresh={() => setTick(t => t + 1)}
         />
       )}
+
+      {adminRemoveTarget && (
+        <AdminRemoveListingModal
+          listing={adminRemoveTarget}
+          onClose={() => setAdminRemoveTarget(null)}
+          onRemoved={() => { setSelectedListing(null); setTick(t => t + 1); }}
+        />
+      )}
     </div>
   );
 }
 
-function ListingCard({ listing, onClick, onToggleWatchlist }) {
+function ListingCard({ listing, onClick, onToggleWatchlist, isAdmin, onAdminRemove }) {
   const seller = getUserById(listing.seller_id);
   const payout = Math.round(listing.price * listing.commission / 100);
   const isClaimed = listing.status === 'claimed' || listing.status === 'negotiating';
@@ -207,6 +220,23 @@ function ListingCard({ listing, onClick, onToggleWatchlist }) {
             color={inWatchlist ? 'var(--rausch)' : 'white'}
             strokeWidth={2} />
         </button>
+
+        {/* Admin moderation pill — only renders when current user is_admin. */}
+        {isAdmin && (
+          <button onClick={(e) => { e.stopPropagation(); onAdminRemove?.(); }}
+            title="Remove listing (admin)"
+            style={{
+              position: 'absolute', bottom: 12, right: 12,
+              background: 'var(--rausch)', color: 'white',
+              border: 'none', borderRadius: 999, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px', fontSize: 12, fontWeight: 500,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+            }}
+          >
+            <ShieldAlert size={14} /> Remove
+          </button>
+        )}
 
         {/* Status badge (top left) */}
         {(isClaimed || isSold) && (

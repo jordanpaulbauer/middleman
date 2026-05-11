@@ -1280,6 +1280,29 @@ export const Stripe = {
   getDashboardUrl: () => 'https://dashboard.stripe.com/',
 };
 
+// ── Admin ────────────────────────────────────────────────────────
+// Moderation actions for accounts with profile.is_admin = true. All
+// privileged work happens inside edge functions (verified server-side).
+export const Admin = {
+  isAdmin: () => Boolean(currentUser?.is_admin),
+
+  // Deletes the listing and emails the seller with the reason. Reason is
+  // a short tag (e.g. "Prohibited item"), custom_message is optional
+  // free-text shown to the seller in the email body.
+  removeListing: async (listingId, { reason, customMessage } = {}) => {
+    const result = await callEdgeFunction('admin-remove-listing', {
+      listing_id: listingId,
+      reason: reason || null,
+      custom_message: customMessage || null,
+    });
+    // Optimistic local removal so the UI updates instantly; realtime
+    // delete event will reconcile from any other tab/session.
+    listings = listings.filter(l => l.id !== listingId);
+    notify();
+    return result;
+  },
+};
+
 // ── Notifications ────────────────────────────────────────────────
 export const Notifications = {
   get: () => notifications.filter(n => n.user_id === currentUser?.id),
@@ -1339,5 +1362,5 @@ export const Notifications = {
   },
 };
 
-const Services = { Auth, Mode, Listings, Closings, Chat, Reviews, Profile, Watchlist, Stripe, Notifications };
+const Services = { Auth, Mode, Listings, Closings, Chat, Reviews, Profile, Watchlist, Stripe, Notifications, Admin };
 export default Services;
