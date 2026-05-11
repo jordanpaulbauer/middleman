@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CreditCard, Lock, Handshake, DollarSign, Copy, CheckCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { CreditCard, Lock, Handshake, DollarSign, Copy, Share2, CheckCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Closings, Listings, Auth, Stripe, Profile } from '../services';
 import { getUserById, formatMoney, formatDate } from '../data/demo';
 import { useToast } from '../hooks/useToast';
@@ -178,12 +178,44 @@ export default function ClosingsPage() {
                           <button className="btn btn-primary btn-sm" onClick={() => setPayClosing(c)}>
                             <CreditCard size={14} /> Pay now
                           </button>
-                          <button className="btn btn-secondary btn-sm" onClick={() => {
+                          <button className="btn btn-secondary btn-sm" onClick={async () => {
                             const url = Stripe.getCheckoutUrl(c.id);
-                            navigator.clipboard.writeText(url);
-                            addToast({ title: 'Payment link copied', message: 'Send it to the buyer.', type: 'success' });
+                            const shareData = {
+                              title: 'MIDDLEMAN payment link',
+                              text: `Pay ${formatMoney(c.agreed_price)} for ${listing?.title || 'your purchase'}.`,
+                              url,
+                            };
+                            // Web Share API → native share sheet on iOS/Android, picker on
+                            // modern desktop browsers. Fall back to copy when unsupported
+                            // or when the user cancels mid-share.
+                            try {
+                              if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
+                                await navigator.share(shareData);
+                                return;
+                              }
+                              throw new Error('Share unsupported');
+                            } catch (err) {
+                              if (err?.name === 'AbortError') return; // user dismissed the sheet
+                              try {
+                                await navigator.clipboard.writeText(url);
+                                addToast({ title: 'Payment link copied', message: 'Send it to the buyer.', type: 'success' });
+                              } catch {
+                                addToast({ title: 'Could not share', message: url, type: 'error' });
+                              }
+                            }
                           }}>
-                            <Copy size={14} /> Copy link for buyer
+                            <Share2 size={14} /> Share link
+                          </button>
+                          <button className="btn btn-secondary btn-sm" onClick={async () => {
+                            const url = Stripe.getCheckoutUrl(c.id);
+                            try {
+                              await navigator.clipboard.writeText(url);
+                              addToast({ title: 'Payment link copied', message: 'Send it to the buyer.', type: 'success' });
+                            } catch {
+                              addToast({ title: 'Could not copy', message: url, type: 'error' });
+                            }
+                          }}>
+                            <Copy size={14} /> Copy link
                           </button>
                         </>
                       )}
