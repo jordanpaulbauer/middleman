@@ -118,7 +118,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   transition: box-shadow var(--transition);
 }
 .stat-card:hover { box-shadow: var(--shadow-md); }
-.stat-card-label { font-size: 12px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+.stat-card-label { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px; }
 .stat-card-value { font-size: 32px; font-weight: 500; color: var(--text); line-height: 1.1; letter-spacing: -0.44px; }
 .stat-card-sub { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
 
@@ -180,7 +180,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .input:focus { border-color: var(--text); box-shadow: 0 0 0 2px var(--text); }
 .input::placeholder { color: var(--text-light); }
 .input-group { display: flex; flex-direction: column; gap: 6px; }
-.input-label { font-size: 12px; font-weight: 500; color: var(--text); text-transform: uppercase; letter-spacing: 0.04em; }
+.input-label { font-size: 12px; font-weight: 500; color: var(--text); }
 .input-hint { font-size: 12px; color: var(--text-muted); }
 
 .select {
@@ -280,7 +280,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 thead th {
   text-align: left; padding: 12px 16px; font-weight: 500; font-size: 11px;
-  color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-muted); 
   border-bottom: 1px solid var(--border);
 }
 tbody td { padding: 16px; border-bottom: 1px solid var(--border-light); }

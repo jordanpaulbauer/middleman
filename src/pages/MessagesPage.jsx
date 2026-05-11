@@ -490,8 +490,8 @@ function ListingPane({ listing, otherUser, otherIsCloser }) {
         </div>
       </div>
 
-      <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: 0.5,
-        textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10 }}>
+      <div style={{ fontSize: 11, fontWeight: 500, 
+        color: 'var(--text-muted)', marginBottom: 10 }}>
         Listing
       </div>
 
@@ -621,8 +621,8 @@ function EmojiPicker({ onPick, onClose }) {
         {EMOJI_GROUPS.map((g, gi) => (
           <div key={g.label} style={{ marginBottom: gi === EMOJI_GROUPS.length - 1 ? 0 : 12 }}>
             <div style={{
-              fontSize: 11, fontWeight: 500, letterSpacing: 0.5,
-              textTransform: 'uppercase', color: 'var(--text-muted)',
+              fontSize: 11, fontWeight: 500, 
+              color: 'var(--text-muted)',
               padding: '0 4px 6px',
             }}>{g.label}</div>
             <div style={{

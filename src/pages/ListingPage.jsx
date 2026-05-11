@@ -90,8 +90,8 @@ export default function ListingPage({ onRequireAuth }) {
             <span style={{
               position: 'absolute', top: 16, left: 16,
               padding: '6px 12px', background: status.bg, color: status.color,
-              borderRadius: 999, fontSize: 12, fontWeight: 500, letterSpacing: 0.5,
-              textTransform: 'uppercase',
+              borderRadius: 999, fontSize: 12, fontWeight: 500, 
+              
             }}>{status.label}</span>
           </div>
 
@@ -135,8 +135,8 @@ export default function ListingPage({ onRequireAuth }) {
             border: '1px solid var(--border-light)', borderRadius: 18,
             padding: 24, boxShadow: 'var(--shadow-sm)',
           }}>
-            <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: 0.5,
-              textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, 
+              color: 'var(--text-muted)', marginBottom: 6 }}>
               {listing.commission}% commission
             </div>
             <div style={{

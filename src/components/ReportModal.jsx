@@ -156,6 +156,6 @@ export default function ReportModal({ entityType, entityId, entityLabel, onClose
 }
 
 const inputLabel = {
-  display: 'block', fontSize: 11, fontWeight: 500, letterSpacing: 0.5,
-  textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6,
+  display: 'block', fontSize: 11, fontWeight: 500, 
+  color: 'var(--text-muted)', marginBottom: 6,
 };

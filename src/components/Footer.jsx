@@ -84,7 +84,7 @@ function Column({ title, links }) {
     <div>
       <div style={{
         fontSize: 12, fontWeight: 500, letterSpacing: 0.6,
-        textTransform: 'uppercase', color: 'var(--text)',
+        color: 'var(--text)',
         marginBottom: 14,
       }}>
         {title}

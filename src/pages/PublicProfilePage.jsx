@@ -213,8 +213,8 @@ function Stat({ label, value }) {
       border: '1px solid var(--border-light)', borderRadius: 12,
       padding: '14px 16px',
     }}>
-      <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: 0.5,
-        textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+      <div style={{ fontSize: 11, fontWeight: 500, 
+        color: 'var(--text-muted)' }}>
         {label}
       </div>
       <div style={{ fontSize: 22, fontWeight: 500, marginTop: 4 }}>{value}</div>

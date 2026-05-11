@@ -121,7 +121,7 @@ const card = {
 const title = { fontSize: 24, fontWeight: 500, letterSpacing: '-0.4px', margin: '0 0 18px' };
 const muted = { fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.55, margin: '0 0 18px' };
 const inputGroup = { marginBottom: 14 };
-const inputLabel = { display: 'block', fontSize: 11, fontWeight: 500, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 };
+const inputLabel = { display: 'block', fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', marginBottom: 6 };
 const inputField = {
   width: '100%', padding: '12px 14px', border: '1px solid var(--border)',
   borderRadius: 8, fontSize: 15, color: 'var(--text)', outline: 'none', background: 'transparent',

@@ -75,19 +75,19 @@ export default function AuthModal({ onAuth, onClose }) {
             <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
               {mode === 'register' && (
                 <div style={{ position: 'relative', borderBottom: '1px solid var(--border)' }}>
-                  <label style={{ position: 'absolute', top: 8, left: 16, fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Full Name</label>
+                  <label style={{ position: 'absolute', top: 8, left: 16, fontSize: 10, fontWeight: 500, color: 'var(--text-muted)' }}>Full Name</label>
                   <input style={{ width: '100%', border: 'none', outline: 'none', padding: '26px 16px 8px', fontSize: 16, color: 'var(--text)', background: 'transparent' }}
                     value={name} onChange={e => setName(e.target.value)} placeholder="John Doe" required />
                 </div>
               )}
               <div style={{ position: 'relative', borderBottom: mode !== 'forgot' ? '1px solid var(--border)' : 'none' }}>
-                <label style={{ position: 'absolute', top: 8, left: 16, fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Email</label>
+                <label style={{ position: 'absolute', top: 8, left: 16, fontSize: 10, fontWeight: 500, color: 'var(--text-muted)' }}>Email</label>
                 <input style={{ width: '100%', border: 'none', outline: 'none', padding: '26px 16px 8px', fontSize: 16, color: 'var(--text)', background: 'transparent' }}
                   type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@example.com" required />
               </div>
               {mode !== 'forgot' && (
                 <div style={{ position: 'relative' }}>
-                  <label style={{ position: 'absolute', top: 8, left: 16, fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Password</label>
+                  <label style={{ position: 'absolute', top: 8, left: 16, fontSize: 10, fontWeight: 500, color: 'var(--text-muted)' }}>Password</label>
                   <input style={{ width: '100%', border: 'none', outline: 'none', padding: '26px 16px 8px', fontSize: 16, color: 'var(--text)', background: 'transparent', paddingRight: 48 }}
                     type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" required />
                   <button type="button" onClick={() => setShowPw(!showPw)}
