@@ -35,7 +35,7 @@ export default function NotificationDropdown({ onClose }) {
   return (
     <div className="notif-dropdown" onClick={e => e.stopPropagation()}>
       <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontWeight: 700, fontSize: 16 }}>Notifications</span>
+        <span style={{ fontWeight: 500, fontSize: 16 }}>Notifications</span>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn-ghost btn-sm" onClick={() => Notifications.markAllRead()}>
             <Check size={14} /> Mark All Read

@@ -41,7 +41,7 @@ export default function ChatPanel({ onClose, initialConversationId }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', zIndex: 1099 }} onClick={onClose} />
         <div className="slide-panel">
           <div className="slide-panel-header">
-            <span style={{ fontWeight: 700, fontSize: 18 }}>Messages</span>
+            <span style={{ fontWeight: 500, fontSize: 18 }}>Messages</span>
             <button className="modal-close" onClick={onClose}><X size={16} /></button>
           </div>
           <div className="slide-panel-body">
@@ -63,7 +63,7 @@ export default function ChatPanel({ onClose, initialConversationId }) {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontWeight: 600, fontSize: 14 }}>{c.otherUser?.full_name}</span>
+                      <span style={{ fontWeight: 500, fontSize: 14 }}>{c.otherUser?.full_name}</span>
                       <span style={{ fontSize: 12, color: 'var(--text-light)' }}>{formatTimeAgo(c.last_message_at)}</span>
                     </div>
                     {c.listing && (
@@ -78,7 +78,7 @@ export default function ChatPanel({ onClose, initialConversationId }) {
                   {c.unreadCount > 0 && (
                     <span style={{
                       width: 20, height: 20, borderRadius: '50%', background: 'var(--accent)', color: 'white',
-                      fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, alignSelf: 'center',
+                      fontSize: 11, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, alignSelf: 'center',
                     }}>{c.unreadCount}</span>
                   )}
                 </div>
@@ -102,7 +102,7 @@ export default function ChatPanel({ onClose, initialConversationId }) {
             </button>
             <div className="avatar avatar-sm">{activeConv?.otherUser?.full_name?.[0]}</div>
             <div>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{activeConv?.otherUser?.full_name}</div>
+              <div style={{ fontWeight: 500, fontSize: 14 }}>{activeConv?.otherUser?.full_name}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{activeConv?.listing?.title}</div>
             </div>
           </div>
@@ -114,7 +114,7 @@ export default function ChatPanel({ onClose, initialConversationId }) {
           <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border-light)', display: 'flex', gap: 12, background: 'var(--bg-subtle)' }}>
             <img src={activeConv.listing.photos?.[0]} alt="" style={{ width: 48, height: 36, borderRadius: 6, objectFit: 'cover' }} />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{activeConv.listing.title}</div>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>{activeConv.listing.title}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>${activeConv.listing.price?.toLocaleString()}</div>
             </div>
           </div>

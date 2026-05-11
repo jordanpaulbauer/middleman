@@ -61,7 +61,7 @@ export default function ReportModal({ entityType, entityId, entityLabel, onClose
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Flag size={16} color="var(--text-muted)" />
-            <span style={{ fontSize: 14, fontWeight: 600 }}>Report {entityType}</span>
+            <span style={{ fontSize: 14, fontWeight: 500 }}>Report {entityType}</span>
           </div>
           <button onClick={onClose} aria-label="Close" style={{
             width: 32, height: 32, borderRadius: '50%',
@@ -136,7 +136,7 @@ export default function ReportModal({ entityType, entityId, entityLabel, onClose
             style={{
               width: '100%', padding: '12px 18px',
               background: 'var(--rausch)', color: 'white', border: 'none',
-              borderRadius: 10, fontSize: 14, fontWeight: 600,
+              borderRadius: 10, fontSize: 14, fontWeight: 500,
               cursor: (!reason || submitting) ? 'not-allowed' : 'pointer',
               opacity: (!reason || submitting) ? 0.6 : 1,
             }}
@@ -156,6 +156,6 @@ export default function ReportModal({ entityType, entityId, entityLabel, onClose
 }
 
 const inputLabel = {
-  display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+  display: 'block', fontSize: 11, fontWeight: 500, letterSpacing: 0.5,
   textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6,
 };

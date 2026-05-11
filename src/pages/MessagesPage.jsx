@@ -137,7 +137,7 @@ export default function MessagesPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             marginBottom: 14,
           }}>
-            <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: '-0.4px' }}>
+            <h2 style={{ fontSize: 22, fontWeight: 500, margin: 0, letterSpacing: '-0.4px' }}>
               Messages
             </h2>
             <button title="More" style={iconBtn}>
@@ -225,7 +225,7 @@ export default function MessagesPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                 <Avatar name={activeConv.otherUser?.full_name} size={40} />
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.2,
+                  <div style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.2,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {activeConv.otherUser?.full_name}
                   </div>
@@ -361,14 +361,14 @@ function TabPill({ active, count, onClick, children }) {
         border: 'none', cursor: 'pointer',
         background: active ? 'var(--text)' : 'var(--bg-subtle)',
         color: active ? 'white' : 'var(--text)',
-        fontSize: 13, fontWeight: 600,
+        fontSize: 13, fontWeight: 500,
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         transition: 'all 200ms',
       }}
     >
       {children}
       <span style={{
-        fontSize: 11, fontWeight: 600, opacity: active ? 0.8 : 0.5,
+        fontSize: 11, fontWeight: 500, opacity: active ? 0.8 : 0.5,
       }}>{count}</span>
     </button>
   );
@@ -481,7 +481,7 @@ function ListingPane({ listing, otherUser, otherIsCloser }) {
         marginBottom: 18,
       }}>
         <Avatar name={otherUser?.full_name} size={72} />
-        <div style={{ fontSize: 16, fontWeight: 600, marginTop: 10 }}>
+        <div style={{ fontSize: 16, fontWeight: 500, marginTop: 10 }}>
           {otherUser?.full_name}
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
@@ -490,7 +490,7 @@ function ListingPane({ listing, otherUser, otherIsCloser }) {
         </div>
       </div>
 
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+      <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: 0.5,
         textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10 }}>
         Listing
       </div>
@@ -505,12 +505,12 @@ function ListingPane({ listing, otherUser, otherIsCloser }) {
           }} />
         )}
         <div style={{ padding: 14 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.3, marginBottom: 8 }}>
+          <div style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.3, marginBottom: 8 }}>
             {listing.title}
           </div>
           <div style={{
             display: 'inline-block', background: 'var(--green-light)', color: 'var(--green)',
-            fontSize: 13, fontWeight: 700, padding: '4px 10px', borderRadius: 999,
+            fontSize: 13, fontWeight: 500, padding: '4px 10px', borderRadius: 999,
             marginBottom: 8,
           }}>
             ${payout.toLocaleString()} payout
@@ -529,7 +529,7 @@ function ListingPane({ listing, otherUser, otherIsCloser }) {
         style={{
           width: '100%', padding: '10px 14px', borderRadius: 10,
           border: '1px solid var(--border)', background: 'var(--bg)',
-          fontSize: 13, fontWeight: 600, color: 'var(--text)', cursor: 'pointer',
+          fontSize: 13, fontWeight: 500, color: 'var(--text)', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         }}
       >
@@ -547,7 +547,7 @@ function Status({ status }) {
     sold: { label: 'Sold', color: 'var(--text-muted)' },
   };
   const s = map[status] || map.open;
-  return <span style={{ color: s.color, fontWeight: 600 }}>● {s.label}</span>;
+  return <span style={{ color: s.color, fontWeight: 500 }}>● {s.label}</span>;
 }
 
 function Avatar({ name, size = 40, unread = false }) {
@@ -558,7 +558,7 @@ function Avatar({ name, size = 40, unread = false }) {
         width: size, height: size, borderRadius: '50%',
         background: 'var(--text)', color: 'white',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: Math.round(size * 0.4), fontWeight: 600,
+        fontSize: Math.round(size * 0.4), fontWeight: 500,
       }}>{initial}</div>
       {unread && (
         <span style={{
@@ -578,7 +578,7 @@ function EmptyThread() {
       flexDirection: 'column', gap: 8, color: 'var(--text-muted)', padding: 24,
     }}>
       <ImageIcon size={42} style={{ opacity: 0.3 }} />
-      <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)' }}>
+      <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--text)' }}>
         Select a conversation
       </div>
       <div style={{ fontSize: 13 }}>Pick a chat from the left to start messaging.</div>
@@ -621,7 +621,7 @@ function EmojiPicker({ onPick, onClose }) {
         {EMOJI_GROUPS.map((g, gi) => (
           <div key={g.label} style={{ marginBottom: gi === EMOJI_GROUPS.length - 1 ? 0 : 12 }}>
             <div style={{
-              fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+              fontSize: 11, fontWeight: 500, letterSpacing: 0.5,
               textTransform: 'uppercase', color: 'var(--text-muted)',
               padding: '0 4px 6px',
             }}>{g.label}</div>

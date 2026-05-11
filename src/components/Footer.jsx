@@ -63,7 +63,7 @@ export default function Footer() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{
-              fontWeight: 800, fontSize: 16, color: 'var(--rausch)',
+              fontWeight: 500, fontSize: 16, color: 'var(--rausch)',
               letterSpacing: '-0.4px',
             }}>middleman</span>
             <span>© 2026 MIDDLEMAN, Inc.</span>
@@ -83,7 +83,7 @@ function Column({ title, links }) {
   return (
     <div>
       <div style={{
-        fontSize: 12, fontWeight: 700, letterSpacing: 0.6,
+        fontSize: 12, fontWeight: 500, letterSpacing: 0.6,
         textTransform: 'uppercase', color: 'var(--text)',
         marginBottom: 14,
       }}>

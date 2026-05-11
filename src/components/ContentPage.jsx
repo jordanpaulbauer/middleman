@@ -14,7 +14,7 @@ export default function ContentPage({ title, seoTitle, seoDescription, lastUpdat
       />
       <header style={{ marginBottom: 28 }}>
         <h1 style={{
-          fontSize: 36, lineHeight: 1.15, fontWeight: 700,
+          fontSize: 36, lineHeight: 1.15, fontWeight: 500,
           letterSpacing: '-0.8px', margin: 0,
         }}>{title}</h1>
         {lastUpdated && (
@@ -34,7 +34,7 @@ export default function ContentPage({ title, seoTitle, seoDescription, lastUpdat
       {sections?.map((s, i) => (
         <section key={i} style={{ marginBottom: 28 }}>
           <h2 style={{
-            fontSize: 20, fontWeight: 700, letterSpacing: '-0.2px',
+            fontSize: 20, fontWeight: 500, letterSpacing: '-0.2px',
             margin: '0 0 12px',
           }}>{s.heading}</h2>
           {Array.isArray(s.body)

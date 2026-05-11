@@ -100,7 +100,7 @@ export default function SellerDashboard({ onOpenChat }) {
                   <img src={l.photos?.[0]} alt="" style={{ width: 100, height: 75, borderRadius: 8, objectFit: 'cover' }} />
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                      <div style={{ fontWeight: 600, fontSize: 16, minWidth: 0, flex: 1 }}>{l.title}</div>
+                      <div style={{ fontWeight: 500, fontSize: 16, minWidth: 0, flex: 1 }}>{l.title}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         {l.status === 'open' && (
                           <>
@@ -203,7 +203,7 @@ export default function SellerDashboard({ onOpenChat }) {
                       <td>{formatMoney(c.agreed_price)}</td>
                       <td style={{ color: 'var(--red)' }}>-{formatMoney(commission)}</td>
                       <td style={{ color: 'var(--text-muted)' }}>-{formatMoney(platformFee)}</td>
-                      <td style={{ color: 'var(--green)', fontWeight: 600 }}>{formatMoney(net)}</td>
+                      <td style={{ color: 'var(--green)', fontWeight: 500 }}>{formatMoney(net)}</td>
                       <td style={{ color: 'var(--text-muted)' }}>{formatDate(c.completed_at)}</td>
                       <td>
                         {!hasReview && (

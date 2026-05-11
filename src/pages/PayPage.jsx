@@ -71,7 +71,7 @@ export default function PayPage() {
     <div style={wrap}>
       <Seo title="Complete your payment" noIndex />
       <header style={{ padding: '20px 28px', borderBottom: '1px solid var(--border-light)' }}>
-        <span style={{ fontWeight: 800, fontSize: 22, letterSpacing: '-0.5px', color: 'var(--rausch)' }}>
+        <span style={{ fontWeight: 500, fontSize: 22, letterSpacing: '-0.5px', color: 'var(--rausch)' }}>
           middleman
         </span>
       </header>
@@ -105,7 +105,7 @@ export default function PayPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Total</span>
-                <span style={{ fontWeight: 700, fontSize: 18 }}>
+                <span style={{ fontWeight: 500, fontSize: 18 }}>
                   ${(closing.agreed_price_cents / 100).toLocaleString('en-US')}
                 </span>
               </div>
@@ -192,10 +192,10 @@ const wrap = {
   minHeight: '100vh',
   background: 'linear-gradient(135deg, #fff0f3 0%, #ffffff 50%, #fff0f3 100%)',
 };
-const title = { fontSize: 22, fontWeight: 700, letterSpacing: '-0.4px', margin: '0 0 12px' };
+const title = { fontSize: 22, fontWeight: 500, letterSpacing: '-0.4px', margin: '0 0 12px' };
 const muted = { fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.55, margin: '0 0 18px' };
 const primaryBtn = {
   padding: '14px 22px', background: 'var(--rausch)',
   color: 'white', border: 'none', borderRadius: 10,
-  fontSize: 15, fontWeight: 600, cursor: 'pointer',
+  fontSize: 15, fontWeight: 500, cursor: 'pointer',
 };

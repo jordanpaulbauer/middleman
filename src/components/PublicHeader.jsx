@@ -16,7 +16,7 @@ export default function PublicHeader({ onSignIn }) {
         height: 72, maxWidth: 1280, margin: '0 auto',
       }}>
         <Link to="/" style={{
-          fontWeight: 800, fontSize: 22, letterSpacing: '-0.5px',
+          fontWeight: 500, fontSize: 22, letterSpacing: '-0.5px',
           color: 'var(--rausch)', textDecoration: 'none',
         }}>
           middleman
@@ -28,7 +28,7 @@ export default function PublicHeader({ onSignIn }) {
             style={{
               padding: '8px 16px', background: 'transparent',
               border: 'none', borderRadius: 999,
-              fontSize: 14, fontWeight: 600, color: 'var(--text)',
+              fontSize: 14, fontWeight: 500, color: 'var(--text)',
               cursor: 'pointer',
             }}
           >Sign in</button>
@@ -37,7 +37,7 @@ export default function PublicHeader({ onSignIn }) {
             style={{
               padding: '10px 18px', background: 'var(--rausch)',
               border: 'none', borderRadius: 999, color: 'white',
-              fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              fontSize: 14, fontWeight: 500, cursor: 'pointer',
             }}
           >Get started</button>
         </div>

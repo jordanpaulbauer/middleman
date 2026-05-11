@@ -50,7 +50,7 @@ export default function Navbar({ onOpenChat, user }) {
         {/* Logo + role subscript (Airbnb "· hosting" pattern) */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, cursor: 'pointer', flexShrink: 0 }}
              onClick={() => navigate(mode === 'seller' ? '/seller' : '/browse')}>
-          <span style={{ color: 'var(--rausch)', fontWeight: 800, fontSize: isNarrow ? 18 : 22, letterSpacing: '-0.5px' }}>middleman</span>
+          <span style={{ color: 'var(--rausch)', fontWeight: 500, fontSize: isNarrow ? 18 : 22, letterSpacing: '-0.5px' }}>middleman</span>
           {!isNarrow && (
             <span style={{
               color: 'var(--text-muted)', fontWeight: 500, fontSize: 14, letterSpacing: '-0.1px',
@@ -97,7 +97,7 @@ export default function Navbar({ onOpenChat, user }) {
             {unreadMessages > 0 && (
               <span style={{
                 position: 'absolute', top: 2, right: 2, minWidth: 18, height: 18, borderRadius: 9,
-                background: 'var(--rausch)', color: 'white', fontSize: 10, fontWeight: 700,
+                background: 'var(--rausch)', color: 'white', fontSize: 10, fontWeight: 500,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
                 border: '2px solid white',
               }}>{unreadMessages}</span>
@@ -121,7 +121,7 @@ export default function Navbar({ onOpenChat, user }) {
               {unreadNotifs > 0 && (
                 <span style={{
                   position: 'absolute', top: 2, right: 2, minWidth: 18, height: 18, borderRadius: 9,
-                  background: 'var(--rausch)', color: 'white', fontSize: 10, fontWeight: 700,
+                  background: 'var(--rausch)', color: 'white', fontSize: 10, fontWeight: 500,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
                   border: '2px solid white',
                 }}>{unreadNotifs}</span>
@@ -150,7 +150,7 @@ export default function Navbar({ onOpenChat, user }) {
                 width: 30, height: 30, borderRadius: '50%',
                 background: 'var(--text)', color: 'white',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 13, fontWeight: 600,
+                fontSize: 13, fontWeight: 500,
               }}>
                 {user?.photo_url
                   ? <img src={user.photo_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
@@ -243,7 +243,7 @@ function MenuButton({ icon, label, onClick, bold, badge }) {
       <span style={{ flex: 1, textAlign: 'left' }}>{label}</span>
       {badge && <span style={{
         minWidth: 20, height: 20, borderRadius: 10,
-        background: 'var(--rausch)', color: 'white', fontSize: 11, fontWeight: 700,
+        background: 'var(--rausch)', color: 'white', fontSize: 11, fontWeight: 500,
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px',
       }}>{badge}</span>}
     </button>

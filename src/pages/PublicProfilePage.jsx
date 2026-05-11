@@ -55,7 +55,7 @@ export default function PublicProfilePage() {
               width: 96, height: 96, borderRadius: '50%',
               background: 'var(--text)', color: 'white',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 36, fontWeight: 600,
+              fontSize: 36, fontWeight: 500,
             }}>{profile.full_name?.[0]?.toUpperCase()}</div>
           )}
         </div>
@@ -63,7 +63,7 @@ export default function PublicProfilePage() {
         <div style={{ flex: 1, minWidth: 240 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <h1 style={{
-              fontSize: 28, fontWeight: 700, margin: 0,
+              fontSize: 28, fontWeight: 500, margin: 0,
               letterSpacing: '-0.4px',
             }}>{profile.full_name}</h1>
             {profile.is_verified && (
@@ -71,7 +71,7 @@ export default function PublicProfilePage() {
                 display: 'inline-flex', alignItems: 'center', gap: 4,
                 background: 'var(--blue-light)', color: 'var(--blue)',
                 padding: '4px 10px', borderRadius: 999,
-                fontSize: 12, fontWeight: 700,
+                fontSize: 12, fontWeight: 500,
               }}>
                 <Shield size={13} /> Verified
               </span>
@@ -115,7 +115,7 @@ export default function PublicProfilePage() {
       {/* Specialties */}
       {profile.specialties?.length > 0 && (
         <section style={{ marginBottom: 32 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 12px' }}>Specialties</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 500, margin: '0 0 12px' }}>Specialties</h2>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {profile.specialties.map((s) => (
               <span key={s} style={{
@@ -129,7 +129,7 @@ export default function PublicProfilePage() {
 
       {/* Reviews */}
       <section>
-        <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 16px' }}>
+        <h2 style={{ fontSize: 18, fontWeight: 500, margin: '0 0 16px' }}>
           Reviews {reviews.length > 0 && (
             <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>· {reviews.length}</span>
           )}
@@ -150,10 +150,10 @@ export default function PublicProfilePage() {
                       width: 36, height: 36, borderRadius: '50%',
                       background: 'var(--text)', color: 'white',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 14, fontWeight: 600,
+                      fontSize: 14, fontWeight: 500,
                     }}>{seller?.full_name?.[0]?.toUpperCase() || '?'}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{seller?.full_name || 'Anonymous'}</div>
+                      <div style={{ fontSize: 14, fontWeight: 500 }}>{seller?.full_name || 'Anonymous'}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(r.created_at)}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 2, color: 'var(--rausch)' }}>
@@ -213,11 +213,11 @@ function Stat({ label, value }) {
       border: '1px solid var(--border-light)', borderRadius: 12,
       padding: '14px 16px',
     }}>
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+      <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: 0.5,
         textTransform: 'uppercase', color: 'var(--text-muted)' }}>
         {label}
       </div>
-      <div style={{ fontSize: 22, fontWeight: 700, marginTop: 4 }}>{value}</div>
+      <div style={{ fontSize: 22, fontWeight: 500, marginTop: 4 }}>{value}</div>
     </div>
   );
 }

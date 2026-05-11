@@ -120,14 +120,14 @@ export default function ClosingsPage() {
                   <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
                     <img src={listing?.photos?.[0]} alt="" style={{ width: 80, height: 60, borderRadius: 8, objectFit: 'cover' }} />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: 16 }}>{listing?.title}</div>
+                      <div style={{ fontWeight: 500, fontSize: 16 }}>{listing?.title}</div>
                       <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
                         Closer: {closer?.full_name} · Seller: {seller?.full_name}
                       </div>
                       <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                         Buyer: {c.buyer_name} ({c.buyer_email})
                       </div>
-                      <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>{formatMoney(c.agreed_price)}</div>
+                      <div style={{ fontSize: 18, fontWeight: 500, marginTop: 4 }}>{formatMoney(c.agreed_price)}</div>
                     </div>
                     {c.status === 'disputed' && <span className="badge badge-red"><AlertTriangle size={12} /> Disputed</span>}
                   </div>
@@ -153,19 +153,19 @@ export default function ClosingsPage() {
                   <div style={{ padding: '0 20px 20px', borderTop: '1px solid var(--border-light)' }}>
                     {/* Payout Breakdown */}
                     <div style={{ background: 'var(--bg-subtle)', borderRadius: 8, padding: 16, marginTop: 16, marginBottom: 16 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: 'var(--text-muted)' }}>Payout Breakdown</div>
+                      <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 12, color: 'var(--text-muted)' }}>Payout Breakdown</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                          <span>Seller ({seller?.full_name})</span><span style={{ fontWeight: 600 }}>{formatMoney(sellerNet)}</span>
+                          <span>Seller ({seller?.full_name})</span><span style={{ fontWeight: 500 }}>{formatMoney(sellerNet)}</span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                          <span>Closer ({closer?.full_name})</span><span style={{ fontWeight: 600, color: 'var(--green)' }}>{formatMoney(commission)}</span>
+                          <span>Closer ({closer?.full_name})</span><span style={{ fontWeight: 500, color: 'var(--green)' }}>{formatMoney(commission)}</span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
                           <span>Platform Fee ({c.platform_fee_pct}%)</span><span style={{ color: 'var(--text-muted)' }}>{formatMoney(platformFee)}</span>
                         </div>
                         <div style={{ height: 1, background: 'var(--border)' }} />
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 700 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 500 }}>
                           <span>Total</span><span>{formatMoney(c.agreed_price)}</span>
                         </div>
                       </div>
@@ -261,7 +261,7 @@ export default function ClosingsPage() {
             <div className="modal-body">
               <div style={{ display: 'flex', gap: 12, marginBottom: 20, padding: 12, background: 'var(--bg-subtle)', borderRadius: 8 }}>
                 <img src={previewListing?.photos?.[0]} alt="" style={{ width: 60, height: 45, borderRadius: 6, objectFit: 'cover' }} />
-                <div><div style={{ fontWeight: 600 }}>{previewListing?.title}</div>
+                <div><div style={{ fontWeight: 500 }}>{previewListing?.title}</div>
                   <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Asking: {formatMoney(previewListing?.price)} · {previewListing?.commission}% commission</div></div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -274,11 +274,11 @@ export default function ClosingsPage() {
               </div>
               {price > 0 && (
                 <div style={{ marginTop: 20, background: 'var(--bg-subtle)', borderRadius: 8, padding: 16 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--text-muted)' }}>Live Payout Preview</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8, color: 'var(--text-muted)' }}>Live Payout Preview</div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 4 }}>
                     <span>Seller</span><span>{formatMoney(previewSeller)}</span></div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 4 }}>
-                    <span>Closer (you)</span><span style={{ color: 'var(--green)', fontWeight: 600 }}>{formatMoney(previewComm)}</span></div>
+                    <span>Closer (you)</span><span style={{ color: 'var(--green)', fontWeight: 500 }}>{formatMoney(previewComm)}</span></div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: 'var(--text-muted)' }}>
                     <span>Platform (4%)</span><span>{formatMoney(previewPlatform)}</span></div>
                 </div>

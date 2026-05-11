@@ -148,7 +148,7 @@ export default function PostListing() {
             {price > 0 && (
               <div style={{ background: 'var(--accent-light)', borderRadius: 8, padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Closer payout on this deal:</span>
-                <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--green)' }}>{formatMoney(payout)}</span>
+                <span style={{ fontSize: 18, fontWeight: 500, color: 'var(--green)' }}>{formatMoney(payout)}</span>
               </div>
             )}
           </div>
@@ -188,7 +188,7 @@ export default function PostListing() {
                 <div key={i} style={{ position: 'relative', width: 100, height: 75, borderRadius: 8, overflow: 'hidden' }}>
                   <img src={photo.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   {i === 0 && (
-                    <span style={{ position: 'absolute', top: 4, left: 4, fontSize: 10, fontWeight: 700, background: 'var(--accent)', color: 'white', padding: '2px 6px', borderRadius: 4 }}>
+                    <span style={{ position: 'absolute', top: 4, left: 4, fontSize: 10, fontWeight: 500, background: 'var(--accent)', color: 'white', padding: '2px 6px', borderRadius: 4 }}>
                       COVER
                     </span>
                   )}

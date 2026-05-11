@@ -42,11 +42,11 @@ export default class ErrorBoundary extends React.Component {
           boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
         }}>
           <div style={{
-            fontWeight: 800, fontSize: 18, color: 'var(--rausch, #ff385c)',
+            fontWeight: 500, fontSize: 18, color: 'var(--rausch, #ff385c)',
             marginBottom: 12, letterSpacing: '-0.4px',
           }}>middleman</div>
           <h1 style={{
-            fontSize: 24, fontWeight: 700, margin: '0 0 12px',
+            fontSize: 24, fontWeight: 500, margin: '0 0 12px',
             letterSpacing: '-0.4px',
           }}>Something broke on our end.</h1>
           <p style={{
@@ -65,7 +65,7 @@ export default class ErrorBoundary extends React.Component {
             style={{
               padding: '12px 24px', background: 'var(--rausch, #ff385c)',
               color: 'white', border: 'none', borderRadius: 8,
-              fontSize: 15, fontWeight: 600, cursor: 'pointer',
+              fontSize: 15, fontWeight: 500, cursor: 'pointer',
             }}
           >Back to home</button>
         </div>

@@ -212,9 +212,9 @@ function ListingCard({ listing, onClick, onToggleWatchlist }) {
         {(isClaimed || isSold) && (
           <div style={{ position: 'absolute', top: 12, left: 12 }}>
             {isSold ? (
-              <span style={{ background: 'var(--text)', color: 'white', padding: '4px 10px', borderRadius: 4, fontSize: 12, fontWeight: 600 }}>SOLD</span>
+              <span style={{ background: 'var(--text)', color: 'white', padding: '4px 10px', borderRadius: 4, fontSize: 12, fontWeight: 500 }}>SOLD</span>
             ) : (
-              <span style={{ background: 'white', color: 'var(--text)', padding: '4px 10px', borderRadius: 4, fontSize: 12, fontWeight: 600, boxShadow: 'var(--shadow-sm)' }}>CLAIMED</span>
+              <span style={{ background: 'white', color: 'var(--text)', padding: '4px 10px', borderRadius: 4, fontSize: 12, fontWeight: 500, boxShadow: 'var(--shadow-sm)' }}>CLAIMED</span>
             )}
           </div>
         )}
@@ -224,7 +224,7 @@ function ListingCard({ listing, onClick, onToggleWatchlist }) {
           <div style={{
             position: 'absolute', top: 12, left: 12,
             background: 'white', padding: '4px 8px', borderRadius: 4,
-            fontSize: 11, fontWeight: 700, color: 'var(--text)',
+            fontSize: 11, fontWeight: 500, color: 'var(--text)',
             boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', gap: 3,
           }}>
             <Flame size={12} color="var(--rausch)" /> HIGH VALUE
@@ -235,7 +235,7 @@ function ListingCard({ listing, onClick, onToggleWatchlist }) {
       {/* ── Details (Airbnb: tight, warm) ── */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-          <div style={{ fontWeight: 600, fontSize: 15, lineHeight: 1.25, color: 'var(--text)',
+          <div style={{ fontWeight: 500, fontSize: 15, lineHeight: 1.25, color: 'var(--text)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {listing.title}
           </div>
@@ -255,7 +255,7 @@ function ListingCard({ listing, onClick, onToggleWatchlist }) {
         </div>
 
         <div style={{ marginTop: 4, display: 'flex', alignItems: 'baseline', gap: 6 }}>
-          <span style={{ fontSize: 15, fontWeight: 600 }}>{formatMoney(listing.price)}</span>
+          <span style={{ fontSize: 15, fontWeight: 500 }}>{formatMoney(listing.price)}</span>
           <span style={{ fontSize: 13, color: 'var(--green)', fontWeight: 500 }}>
             {formatMoney(payout)} payout
           </span>

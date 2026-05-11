@@ -50,7 +50,7 @@ export default function EditListingModal({ listing, onClose, onSaved }) {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '16px 20px', borderBottom: '1px solid var(--border-light)',
         }}>
-          <span style={{ fontSize: 14, fontWeight: 600 }}>Edit listing</span>
+          <span style={{ fontSize: 14, fontWeight: 500 }}>Edit listing</span>
           <button onClick={onClose} aria-label="Close" style={iconBtn}><X size={18} /></button>
         </div>
 

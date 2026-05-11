@@ -118,10 +118,10 @@ const card = {
   border: '1px solid var(--border-light)', borderRadius: 18,
   padding: '32px 28px', boxShadow: 'var(--shadow-md)',
 };
-const title = { fontSize: 24, fontWeight: 700, letterSpacing: '-0.4px', margin: '0 0 18px' };
+const title = { fontSize: 24, fontWeight: 500, letterSpacing: '-0.4px', margin: '0 0 18px' };
 const muted = { fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.55, margin: '0 0 18px' };
 const inputGroup = { marginBottom: 14 };
-const inputLabel = { display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 };
+const inputLabel = { display: 'block', fontSize: 11, fontWeight: 500, letterSpacing: 0.5, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 };
 const inputField = {
   width: '100%', padding: '12px 14px', border: '1px solid var(--border)',
   borderRadius: 8, fontSize: 15, color: 'var(--text)', outline: 'none', background: 'transparent',
@@ -129,7 +129,7 @@ const inputField = {
 const primaryBtn = {
   width: '100%', padding: '14px 18px', background: 'var(--rausch)',
   color: 'white', border: 'none', borderRadius: 10,
-  fontSize: 15, fontWeight: 600, cursor: 'pointer',
+  fontSize: 15, fontWeight: 500, cursor: 'pointer',
 };
 const errorBox = {
   background: 'var(--red-light)', color: 'var(--red)',

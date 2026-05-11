@@ -186,7 +186,7 @@ function AuthGate({ children }) {
     }}>
       <header style={{ padding: '24px 32px' }}>
         <div style={{
-          fontWeight: 800, fontSize: 22, letterSpacing: '-0.5px',
+          fontWeight: 500, fontSize: 22, letterSpacing: '-0.5px',
           color: 'var(--rausch)',
         }}>middleman</div>
       </header>
@@ -198,7 +198,7 @@ function AuthGate({ children }) {
           gridTemplateColumns: '1fr', gap: 48, alignItems: 'center' }}>
           <div style={{ textAlign: 'center' }}>
             <h1 style={{
-              fontSize: 44, lineHeight: 1.1, fontWeight: 700,
+              fontSize: 44, lineHeight: 1.1, fontWeight: 500,
               letterSpacing: '-1px', margin: '0 0 16px',
             }}>
               The marketplace where <span style={{ color: 'var(--rausch)' }}>closers</span> earn

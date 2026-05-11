@@ -72,10 +72,10 @@ const card = {
   border: '1px solid var(--border-light)', borderRadius: 18,
   padding: '32px 28px', boxShadow: 'var(--shadow-md)', textAlign: 'center',
 };
-const title = { fontSize: 24, fontWeight: 700, letterSpacing: '-0.4px', margin: '0 0 12px' };
+const title = { fontSize: 24, fontWeight: 500, letterSpacing: '-0.4px', margin: '0 0 12px' };
 const muted = { fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.55, margin: '0 0 18px' };
 const primaryBtn = {
   padding: '12px 20px', background: 'var(--rausch)',
   color: 'white', border: 'none', borderRadius: 10,
-  fontSize: 14, fontWeight: 600, cursor: 'pointer',
+  fontSize: 14, fontWeight: 500, cursor: 'pointer',
 };

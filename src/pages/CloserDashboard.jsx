@@ -99,7 +99,7 @@ export default function CloserDashboard({ onOpenChat }) {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: 16 }}>{listing.title}</div>
+                        <div style={{ fontWeight: 500, fontSize: 16 }}>{listing.title}</div>
                         <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
                           {formatMoney(payout)} commission · {listing.commission}%
                         </div>
@@ -171,7 +171,7 @@ export default function CloserDashboard({ onOpenChat }) {
                   style={{ position: 'absolute', top: 8, right: 8, background: 'none', border: 'none', color: 'var(--text-light)', cursor: 'pointer' }}>
                   <X size={16} />
                 </button>
-                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{l.title}</div>
+                <div style={{ fontWeight: 500, fontSize: 14, marginBottom: 4 }}>{l.title}</div>
                 <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>
                   {formatMoney(l.price)} · {l.commission}%
                 </div>
@@ -215,7 +215,7 @@ export default function CloserDashboard({ onOpenChat }) {
                       <td style={{ fontWeight: 500 }}>{listing?.title || 'Unknown'}</td>
                       <td>{formatMoney(c.agreed_price)}</td>
                       <td>{c.commission_rate}%</td>
-                      <td style={{ color: 'var(--green)', fontWeight: 600 }}>{formatMoney(payout)}</td>
+                      <td style={{ color: 'var(--green)', fontWeight: 500 }}>{formatMoney(payout)}</td>
                       <td style={{ color: 'var(--text-muted)' }}>{formatDate(c.completed_at)}</td>
                     </tr>
                   );
@@ -223,7 +223,7 @@ export default function CloserDashboard({ onOpenChat }) {
               </tbody>
               {completedClosings.length > 0 && (
                 <tfoot>
-                  <tr style={{ fontWeight: 700, borderTop: '2px solid var(--border)' }}>
+                  <tr style={{ fontWeight: 500, borderTop: '2px solid var(--border)' }}>
                     <td colSpan={3}>Total</td>
                     <td style={{ color: 'var(--green)' }}>{formatMoney(totalEarned)}</td>
                     <td />

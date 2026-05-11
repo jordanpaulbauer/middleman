@@ -38,7 +38,7 @@ export default function AuthModal({ onAuth, onClose }) {
           padding: '20px 24px', borderBottom: '1px solid var(--border-light)',
           textAlign: 'center', position: 'relative',
         }}>
-          <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>
+          <span style={{ fontWeight: 500, fontSize: 16, color: 'var(--text)' }}>
             {mode === 'login' ? 'Log in' : mode === 'register' ? 'Sign up' : 'Reset password'}
           </span>
           {onClose && (
@@ -60,7 +60,7 @@ export default function AuthModal({ onAuth, onClose }) {
 
         <div style={{ padding: '24px 24px 32px' }}>
           {/* Welcome text */}
-          <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 20, letterSpacing: '-0.44px' }}>
+          <h2 style={{ fontSize: 22, fontWeight: 500, marginBottom: 20, letterSpacing: '-0.44px' }}>
             Welcome to <span style={{ color: 'var(--rausch)' }}>middleman</span>
           </h2>
 
@@ -75,23 +75,23 @@ export default function AuthModal({ onAuth, onClose }) {
             <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
               {mode === 'register' && (
                 <div style={{ position: 'relative', borderBottom: '1px solid var(--border)' }}>
-                  <label style={{ position: 'absolute', top: 8, left: 16, fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Full Name</label>
+                  <label style={{ position: 'absolute', top: 8, left: 16, fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Full Name</label>
                   <input style={{ width: '100%', border: 'none', outline: 'none', padding: '26px 16px 8px', fontSize: 16, color: 'var(--text)', background: 'transparent' }}
                     value={name} onChange={e => setName(e.target.value)} placeholder="John Doe" required />
                 </div>
               )}
               <div style={{ position: 'relative', borderBottom: mode !== 'forgot' ? '1px solid var(--border)' : 'none' }}>
-                <label style={{ position: 'absolute', top: 8, left: 16, fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Email</label>
+                <label style={{ position: 'absolute', top: 8, left: 16, fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Email</label>
                 <input style={{ width: '100%', border: 'none', outline: 'none', padding: '26px 16px 8px', fontSize: 16, color: 'var(--text)', background: 'transparent' }}
                   type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@example.com" required />
               </div>
               {mode !== 'forgot' && (
                 <div style={{ position: 'relative' }}>
-                  <label style={{ position: 'absolute', top: 8, left: 16, fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Password</label>
+                  <label style={{ position: 'absolute', top: 8, left: 16, fontSize: 10, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Password</label>
                   <input style={{ width: '100%', border: 'none', outline: 'none', padding: '26px 16px 8px', fontSize: 16, color: 'var(--text)', background: 'transparent', paddingRight: 48 }}
                     type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" required />
                   <button type="button" onClick={() => setShowPw(!showPw)}
-                    style={{ position: 'absolute', right: 12, top: 18, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline', fontSize: 13, fontWeight: 600 }}>
+                    style={{ position: 'absolute', right: 12, top: 18, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline', fontSize: 13, fontWeight: 500 }}>
                     {showPw ? 'Hide' : 'Show'}
                   </button>
                 </div>
@@ -101,7 +101,7 @@ export default function AuthModal({ onAuth, onClose }) {
             {mode === 'login' && (
               <div style={{ textAlign: 'left', marginTop: 12 }}>
                 <button type="button" onClick={() => setMode('forgot')}
-                  style={{ background: 'none', border: 'none', color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>
+                  style={{ background: 'none', border: 'none', color: 'var(--text)', fontSize: 13, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline' }}>
                   Forgot password?
                 </button>
               </div>
@@ -112,7 +112,7 @@ export default function AuthModal({ onAuth, onClose }) {
                 width: '100%', marginTop: 16, padding: '14px 24px',
                 background: loading ? 'var(--border)' : 'var(--rausch)',
                 color: 'white', border: 'none', borderRadius: 8,
-                fontSize: 16, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer',
+                fontSize: 16, fontWeight: 500, cursor: loading ? 'not-allowed' : 'pointer',
                 transition: 'all 200ms',
               }}>
               {loading ? <div className="spinner" style={{ margin: '0 auto' }} /> :
@@ -138,9 +138,9 @@ export default function AuthModal({ onAuth, onClose }) {
 
           <p style={{ marginTop: 20, fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
             {mode === 'login' ? (
-              <>Don&apos;t have an account? <button type="button" onClick={() => setMode('register')} style={{ background: 'none', border: 'none', color: 'var(--text)', fontWeight: 600, cursor: 'pointer', fontSize: 13, textDecoration: 'underline' }}>Sign up</button></>
+              <>Don&apos;t have an account? <button type="button" onClick={() => setMode('register')} style={{ background: 'none', border: 'none', color: 'var(--text)', fontWeight: 500, cursor: 'pointer', fontSize: 13, textDecoration: 'underline' }}>Sign up</button></>
             ) : (
-              <>Already have an account? <button type="button" onClick={() => setMode('login')} style={{ background: 'none', border: 'none', color: 'var(--text)', fontWeight: 600, cursor: 'pointer', fontSize: 13, textDecoration: 'underline' }}>Log in</button></>
+              <>Already have an account? <button type="button" onClick={() => setMode('login')} style={{ background: 'none', border: 'none', color: 'var(--text)', fontWeight: 500, cursor: 'pointer', fontSize: 13, textDecoration: 'underline' }}>Log in</button></>
             )}
           </p>
         </div>

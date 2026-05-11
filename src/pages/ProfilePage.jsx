@@ -91,7 +91,7 @@ export default function ProfilePage() {
 
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-              <h1 style={{ fontSize: 24, fontWeight: 700 }}>{user?.full_name}</h1>
+              <h1 style={{ fontSize: 24, fontWeight: 500 }}>{user?.full_name}</h1>
               <span className="badge badge-blue">{user?.role}</span>
               <Shield size={16} color="var(--blue)" />
               <div className="pulse-dot" />
@@ -142,8 +142,8 @@ export default function ProfilePage() {
         {/* Completeness Bar */}
         <div style={{ marginTop: 24 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>Profile Completeness</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>{completePct}%</span>
+            <span style={{ fontSize: 13, fontWeight: 500 }}>Profile Completeness</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--accent)' }}>{completePct}%</span>
           </div>
           <div className="progress-bar" style={{ height: 8, marginBottom: 12 }}>
             <div className="progress-fill" style={{ width: `${completePct}%`, background: 'var(--accent)' }} />
@@ -235,7 +235,7 @@ export default function ProfilePage() {
               <tr><td colSpan={3} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>No specialties yet</td></tr>
             ) : specialties.map(s => (
               <tr key={s.category}><td style={{ fontWeight: 500 }}>{s.category}</td><td>{s.count}</td>
-                <td style={{ color: 'var(--green)', fontWeight: 600 }}>{formatMoney(s.earned)}</td></tr>
+                <td style={{ color: 'var(--green)', fontWeight: 500 }}>{formatMoney(s.earned)}</td></tr>
             ))}
           </tbody>
         </table></div></div>
@@ -332,7 +332,7 @@ function SettingsModal({ user, onClose, onSave }) {
                 borderRadius: 10,
                 border: '1px solid var(--red)',
               }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--red)' }}>
+                <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--red)' }}>
                   Delete my account
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginBottom: 12 }}>
@@ -376,7 +376,7 @@ function Section({ title, status, children }) {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: status === 'complete' ? 'var(--green)' : 'var(--border)' }} />
-        <div style={{ fontSize: 15, fontWeight: 600 }}>{title}</div>
+        <div style={{ fontSize: 15, fontWeight: 500 }}>{title}</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingLeft: 16 }}>
         {children}

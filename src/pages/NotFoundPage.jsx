@@ -14,11 +14,11 @@ export default function NotFoundPage() {
       }}>
         <div style={{ maxWidth: 480 }}>
           <div style={{
-            fontSize: 64, fontWeight: 800, color: 'var(--rausch)',
+            fontSize: 64, fontWeight: 500, color: 'var(--rausch)',
             letterSpacing: '-2px', lineHeight: 1, marginBottom: 16,
           }}>404</div>
           <h1 style={{
-            fontSize: 26, fontWeight: 700, margin: '0 0 12px',
+            fontSize: 26, fontWeight: 500, margin: '0 0 12px',
             letterSpacing: '-0.4px',
           }}>This page doesn&rsquo;t exist.</h1>
           <p style={{
@@ -30,7 +30,7 @@ export default function NotFoundPage() {
             style={{
               padding: '12px 24px', background: 'var(--rausch)',
               color: 'white', border: 'none', borderRadius: 8,
-              fontSize: 15, fontWeight: 600, cursor: 'pointer',
+              fontSize: 15, fontWeight: 500, cursor: 'pointer',
             }}
           >Back to home</button>
         </div>

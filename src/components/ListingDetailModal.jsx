@@ -87,7 +87,7 @@ export default function ListingDetailModal({ listing, onClose, onOpenChat, onRef
 
           {/* Sold banner */}
           {isSold && (
-            <div style={{ background: 'var(--bg-muted)', borderRadius: 8, padding: '14px 20px', marginBottom: 20, textAlign: 'center', fontWeight: 600, color: 'var(--text-muted)' }}>
+            <div style={{ background: 'var(--bg-muted)', borderRadius: 8, padding: '14px 20px', marginBottom: 20, textAlign: 'center', fontWeight: 500, color: 'var(--text-muted)' }}>
               This listing has been sold
             </div>
           )}
@@ -130,18 +130,18 @@ export default function ListingDetailModal({ listing, onClose, onOpenChat, onRef
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
               <div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>Asking Price</div>
-                <div style={{ fontSize: 28, fontWeight: 800 }}>{formatMoney(listing.price)}</div>
+                <div style={{ fontSize: 28, fontWeight: 500 }}>{formatMoney(listing.price)}</div>
               </div>
               {payout > 5000 && <div className="fire-badge" style={{ fontSize: 13 }}>🔥 HOT DEAL</div>}
             </div>
             <div style={{ display: 'flex', gap: 24 }}>
               <div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Commission</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent)' }}>{listing.commission}%</div>
+                <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--accent)' }}>{listing.commission}%</div>
               </div>
               <div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Your Payout</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--green)' }}>{formatMoney(payout)}</div>
+                <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--green)' }}>{formatMoney(payout)}</div>
               </div>
             </div>
           </div>
@@ -150,7 +150,7 @@ export default function ListingDetailModal({ listing, onClose, onOpenChat, onRef
           {isClaimed && (
             <div style={{ background: 'var(--accent-light)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 24, border: '1px solid #fed7aa' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <div style={{ fontWeight: 600 }}>Claimed by {claimer?.full_name || 'Unknown'}</div>
+                <div style={{ fontWeight: 500 }}>Claimed by {claimer?.full_name || 'Unknown'}</div>
                 <CountdownTimer endDate={listing.claim_end} />
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>

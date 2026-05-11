@@ -52,7 +52,7 @@ export default function PayModal({ closing, onClose, onSuccess }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Lock size={16} color="var(--text-muted)" />
-            <span style={{ fontSize: 14, fontWeight: 600 }}>Complete payment</span>
+            <span style={{ fontSize: 14, fontWeight: 500 }}>Complete payment</span>
           </div>
           <button onClick={onClose} aria-label="Close" style={{
             width: 32, height: 32, borderRadius: '50%',
@@ -77,7 +77,7 @@ export default function PayModal({ closing, onClose, onSuccess }) {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: 'var(--text-muted)' }}>Total</span>
-              <span style={{ fontWeight: 700, fontSize: 18 }}>
+              <span style={{ fontWeight: 500, fontSize: 18 }}>
                 ${(closing.agreed_price || 0).toLocaleString('en-US')}
               </span>
             </div>
@@ -161,7 +161,7 @@ function CheckoutForm({ onSuccess, closingId }) {
       <button type="submit" disabled={!stripe || submitting} style={{
         width: '100%', marginTop: 14, padding: '14px 22px',
         background: 'var(--rausch)', color: 'white', border: 'none', borderRadius: 10,
-        fontSize: 15, fontWeight: 600,
+        fontSize: 15, fontWeight: 500,
         cursor: (!stripe || submitting) ? 'not-allowed' : 'pointer',
         opacity: (!stripe || submitting) ? 0.6 : 1,
       }}>

@@ -90,7 +90,7 @@ export default function ListingPage({ onRequireAuth }) {
             <span style={{
               position: 'absolute', top: 16, left: 16,
               padding: '6px 12px', background: status.bg, color: status.color,
-              borderRadius: 999, fontSize: 12, fontWeight: 700, letterSpacing: 0.5,
+              borderRadius: 999, fontSize: 12, fontWeight: 500, letterSpacing: 0.5,
               textTransform: 'uppercase',
             }}>{status.label}</span>
           </div>
@@ -98,7 +98,7 @@ export default function ListingPage({ onRequireAuth }) {
           {/* Description */}
           {listing.description && (
             <div style={{ marginTop: 28 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 10px' }}>About this listing</h2>
+              <h2 style={{ fontSize: 18, fontWeight: 500, margin: '0 0 10px' }}>About this listing</h2>
               <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--text)', whiteSpace: 'pre-wrap' }}>
                 {listing.description}
               </p>
@@ -135,20 +135,20 @@ export default function ListingPage({ onRequireAuth }) {
             border: '1px solid var(--border-light)', borderRadius: 18,
             padding: 24, boxShadow: 'var(--shadow-sm)',
           }}>
-            <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 0.5,
+            <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: 0.5,
               textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 }}>
               {listing.commission}% commission
             </div>
             <div style={{
               display: 'inline-block', padding: '8px 14px',
               background: 'var(--green-light)', color: 'var(--green)',
-              borderRadius: 999, fontSize: 18, fontWeight: 700,
+              borderRadius: 999, fontSize: 18, fontWeight: 500,
               marginBottom: 12,
             }}>
               {formatMoney(payout)} payout
             </div>
             <h1 style={{
-              fontSize: 24, fontWeight: 700, margin: '0 0 6px',
+              fontSize: 24, fontWeight: 500, margin: '0 0 6px',
               letterSpacing: '-0.4px', lineHeight: 1.2,
             }}>{listing.title}</h1>
             <div style={{ fontSize: 16, color: 'var(--text-muted)', marginBottom: 16 }}>
@@ -173,7 +173,7 @@ export default function ListingPage({ onRequireAuth }) {
                   style={{
                     padding: '14px 18px', background: 'var(--rausch)',
                     color: 'white', border: 'none', borderRadius: 10,
-                    fontSize: 15, fontWeight: 700, cursor: 'pointer',
+                    fontSize: 15, fontWeight: 500, cursor: 'pointer',
                   }}
                 >{user ? 'Claim this listing' : 'Sign in to claim'}</button>
               ) : (
@@ -182,7 +182,7 @@ export default function ListingPage({ onRequireAuth }) {
                   style={{
                     padding: '14px 18px', background: 'var(--bg-muted)',
                     color: 'var(--text-muted)', border: 'none', borderRadius: 10,
-                    fontSize: 15, fontWeight: 600, cursor: 'not-allowed',
+                    fontSize: 15, fontWeight: 500, cursor: 'not-allowed',
                   }}
                 >{status.label}</button>
               )}
@@ -191,7 +191,7 @@ export default function ListingPage({ onRequireAuth }) {
                 style={{
                   padding: '12px 18px', background: 'transparent',
                   border: '1px solid var(--border)', borderRadius: 10,
-                  fontSize: 14, fontWeight: 600, color: 'var(--text)',
+                  fontSize: 14, fontWeight: 500, color: 'var(--text)',
                   cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 }}
@@ -217,11 +217,11 @@ export default function ListingPage({ onRequireAuth }) {
                 width: 48, height: 48, borderRadius: '50%',
                 background: 'var(--text)', color: 'white',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, fontWeight: 600,
+                fontSize: 18, fontWeight: 500,
               }}>{seller.full_name?.[0]?.toUpperCase()}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Listed by</div>
-                <div style={{ fontSize: 15, fontWeight: 600 }}>{seller.full_name}</div>
+                <div style={{ fontSize: 15, fontWeight: 500 }}>{seller.full_name}</div>
                 {seller.location && (
                   <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{seller.location}</div>
                 )}
