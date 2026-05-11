@@ -46,14 +46,19 @@ export default function SellerDashboard({ onOpenChat }) {
 
   const handleReview = async () => {
     if (!showReviewModal) return;
-    await Reviews.submit({
-      listingId: showReviewModal.listing_id, sellerId: user.id,
-      closerId: showReviewModal.closer_id, stars: reviewStars, text: reviewText,
-    });
-    setShowReviewModal(null);
-    setReviewText('');
-    setReviewStars(5);
-    setTick(t => t + 1);
+    try {
+      await Reviews.submit({
+        closingId: showReviewModal.id,
+        stars: reviewStars,
+        text: reviewText,
+      });
+      setShowReviewModal(null);
+      setReviewText('');
+      setReviewStars(5);
+      setTick(t => t + 1);
+    } catch (err) {
+      window.alert(err?.message || 'Could not submit review');
+    }
   };
 
   return (
@@ -196,7 +201,9 @@ export default function SellerDashboard({ onOpenChat }) {
                   const commission = Math.round(c.agreed_price * c.commission_rate / 100);
                   const platformFee = Math.round(c.agreed_price * c.platform_fee_pct / 100);
                   const net = c.agreed_price - commission - platformFee;
-                  const hasReview = Reviews.getForCloser(c.closer_id).some(r => r.listing_id === c.listing_id);
+                  const myReview = Reviews.getMyReviewForClosing(c.id);
+                  const withinWindow = c.completed_at &&
+                    Date.now() - new Date(c.completed_at).getTime() < Reviews.REVIEW_WINDOW_DAYS * 86400000;
                   return (
                     <tr key={c.id}>
                       <td style={{ fontWeight: 500 }}>{listing?.title || 'Unknown'}</td>
@@ -206,10 +213,16 @@ export default function SellerDashboard({ onOpenChat }) {
                       <td style={{ color: 'var(--green)', fontWeight: 500 }}>{formatMoney(net)}</td>
                       <td style={{ color: 'var(--text-muted)' }}>{formatDate(c.completed_at)}</td>
                       <td>
-                        {!hasReview && (
+                        {myReview ? (
+                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            {myReview.published_at ? '✓ Reviewed' : 'Review pending'}
+                          </span>
+                        ) : withinWindow ? (
                           <button className="btn btn-secondary btn-sm" onClick={() => setShowReviewModal(c)}>
                             <Star size={14} /> Review
                           </button>
+                        ) : (
+                          <span style={{ fontSize: 12, color: 'var(--text-light)' }}>Window closed</span>
                         )}
                       </td>
                     </tr>
@@ -230,6 +243,11 @@ export default function SellerDashboard({ onOpenChat }) {
               <button className="modal-close" onClick={() => setShowReviewModal(null)}><span style={{ fontSize: 18 }}>×</span></button>
             </div>
             <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 }}>
+                Your review stays private until the closer also reviews you, or
+                until 21 days pass — whichever comes first. Neither side can read
+                the other's review during that window.
+              </p>
               <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
                 {[1,2,3,4,5].map(s => (
                   <button key={s} onClick={() => setReviewStars(s)}

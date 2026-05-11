@@ -93,11 +93,14 @@ function dbReviewToUi(row) {
   return {
     id: row.id,
     listing_id: row.listing_id,
+    closing_id: row.closing_id,
     seller_id: row.seller_id,
     closer_id: row.closer_id,
+    author_id: row.author_id,
     stars: row.stars,
     text: row.text,
     created_at: row.created_at,
+    published_at: row.published_at,
   };
 }
 
@@ -1009,37 +1012,105 @@ export const Chat = {
 };
 
 // ── Reviews ──────────────────────────────────────────────────────
-export const Reviews = {
-  getForCloser: (closerId) => reviews.filter(r => r.closer_id === closerId),
-  getForSeller: (sellerId) => reviews.filter(r => r.seller_id === sellerId),
+// Airbnb-style mutual reviews with a 21-day double-blind window. The DB
+// hides pending reviews from the counterparty via RLS, so anything we
+// receive here is either published, authored by the current user, or
+// past its 21-day window. The "isPublished" predicate below mirrors
+// that rule for derived computations (avg rating, profile counts, etc).
+const REVIEW_WINDOW_DAYS = 21;
 
-  submit: async ({ listingId, sellerId, closerId, stars, text }) => {
+const isReviewPublished = (r) => {
+  if (!r) return false;
+  if (r.published_at) return true;
+  if (!r.closing_id) return true; // legacy rows with no closing
+  const closing = closings.find(c => c.id === r.closing_id);
+  if (!closing?.completed_at) return false;
+  return new Date(closing.completed_at).getTime() + REVIEW_WINDOW_DAYS * 86400000 < Date.now();
+};
+
+export const Reviews = {
+  // Public-facing lookups: only published reviews count for profile
+  // averages and counts. Pending-but-still-private reviews are filtered
+  // out even when the cache happens to hold them (e.g., the viewer is
+  // the author).
+  getForCloser: (closerId) => reviews.filter(r => r.closer_id === closerId && isReviewPublished(r)),
+  getForSeller: (sellerId) => reviews.filter(r => r.seller_id === sellerId && isReviewPublished(r)),
+
+  // The current user's review for a given closing, if any. Useful for
+  // dashboards to show "your review is pending" state.
+  getMyReviewForClosing: (closingId) =>
+    reviews.find(r => r.closing_id === closingId && r.author_id === currentUser?.id) || null,
+
+  // Has the counterparty already reviewed me on this closing? We can only
+  // tell this is true if the counterparty's review is visible to us in the
+  // cache (which only happens once it publishes — by definition, that
+  // means both parties have reviewed, or 21d elapsed).
+  counterpartyHasReviewed: (closingId) => {
+    if (!currentUser?.id) return false;
+    const closing = closings.find(c => c.id === closingId);
+    if (!closing) return false;
+    const counterparty = closing.seller_id === currentUser.id ? closing.closer_id : closing.seller_id;
+    return reviews.some(r => r.closing_id === closingId && r.author_id === counterparty);
+  },
+
+  submit: async ({ closingId, stars, text }) => {
     if (isSupabaseEnabled) {
-      const { data: row, error } = await supabase
-        .from('reviews')
-        .insert({ listing_id: listingId, seller_id: sellerId, closer_id: closerId, stars, text })
-        .select()
-        .single();
+      const { data: row, error } = await supabase.rpc('submit_review', {
+        p_closing_id: closingId,
+        p_stars: stars,
+        p_text: text || null,
+      });
       if (error) throw new Error(error.message);
-      const ui = dbReviewToUi(row);
-      reviews = [ui, ...reviews];
+      const ui = dbReviewToUi(Array.isArray(row) ? row[0] : row);
+      // The RPC may have flipped published_at on the counterparty's row
+      // too — reload to pick that up.
+      await loadReviews();
       notify();
       return ui;
     }
+    const closing = closings.find(c => c.id === closingId);
+    if (!closing) throw new Error('Closing not found');
     const review = {
-      id: 'rev-' + Date.now(), listing_id: listingId,
-      seller_id: sellerId, closer_id: closerId, stars, text,
+      id: 'rev-' + Date.now(),
+      listing_id: closing.listing_id,
+      closing_id: closingId,
+      seller_id: closing.seller_id,
+      closer_id: closing.closer_id,
+      author_id: currentUser?.id,
+      stars,
+      text,
       created_at: new Date().toISOString(),
+      published_at: null,
     };
     reviews = [...reviews, review];
     notify();
     return review;
   },
 
-  getPending: (sellerId) => {
-    const soldListings = listings.filter(l => l.seller_id === sellerId && l.status === 'sold');
-    return soldListings.filter(l => !reviews.find(r => r.listing_id === l.id && r.seller_id === sellerId));
+  // Closings the current user can review right now: completed within the
+  // 21-day window, user is a party, user hasn't already submitted one.
+  getPendingForMe: () => {
+    if (!currentUser?.id) return [];
+    const cutoff = Date.now() - REVIEW_WINDOW_DAYS * 86400000;
+    return closings.filter(c => {
+      if (c.status !== 'completed') return false;
+      if (!c.completed_at) return false;
+      if (new Date(c.completed_at).getTime() < cutoff) return false;
+      const isParty = c.seller_id === currentUser.id || c.closer_id === currentUser.id;
+      if (!isParty) return false;
+      const mine = reviews.find(r => r.closing_id === c.id && r.author_id === currentUser.id);
+      return !mine;
+    });
   },
+
+  // Legacy: kept for the seller dashboard's "sold listings without a
+  // review yet" prompt. Now delegates to the mutual-review pending list,
+  // filtered to closings where the user is the seller.
+  getPending: (sellerId) => {
+    return Reviews.getPendingForMe().filter(c => c.seller_id === sellerId);
+  },
+
+  REVIEW_WINDOW_DAYS,
 };
 
 // ── Profile ──────────────────────────────────────────────────────

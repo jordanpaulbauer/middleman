@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Flame, DollarSign, TrendingUp, Zap, Heart, Bell, X, MessageCircle, Clock } from 'lucide-react';
-import { Listings, Watchlist, Closings, Auth, Chat } from '../services';
+import { Flame, DollarSign, TrendingUp, Zap, Heart, Bell, X, MessageCircle, Clock, Star } from 'lucide-react';
+import { Listings, Watchlist, Closings, Auth, Chat, Reviews } from '../services';
 import { getUserById, formatMoney, formatDate } from '../data/demo';
 import CountdownTimer, { CountdownProgress } from '../components/CountdownTimer';
 import Seo from '../components/Seo';
@@ -10,7 +10,27 @@ export default function CloserDashboard({ onOpenChat }) {
   const navigate = useNavigate();
   const [tab, setTab] = useState('claims');
   const [, setTick] = useState(0);
+  const [showReviewModal, setShowReviewModal] = useState(null);
+  const [reviewStars, setReviewStars] = useState(5);
+  const [reviewText, setReviewText] = useState('');
   const user = Auth.getUser();
+
+  const handleReview = async () => {
+    if (!showReviewModal) return;
+    try {
+      await Reviews.submit({
+        closingId: showReviewModal.id,
+        stars: reviewStars,
+        text: reviewText,
+      });
+      setShowReviewModal(null);
+      setReviewText('');
+      setReviewStars(5);
+      setTick(t => t + 1);
+    } catch (err) {
+      window.alert(err?.message || 'Could not submit review');
+    }
+  };
 
   const allListings = Listings.getAll();
   const activeClaims = allListings.filter(l => l.claimed_by === user?.id && (l.status === 'claimed' || l.status === 'negotiating'));
@@ -202,14 +222,17 @@ export default function CloserDashboard({ onOpenChat }) {
           <div className="table-container">
             <table>
               <thead>
-                <tr><th>Item</th><th>Sale Price</th><th>Commission</th><th>Payout</th><th>Date</th></tr>
+                <tr><th>Item</th><th>Sale Price</th><th>Commission</th><th>Payout</th><th>Date</th><th>Review</th></tr>
               </thead>
               <tbody>
                 {completedClosings.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>No earnings yet</td></tr>
+                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>No earnings yet</td></tr>
                 ) : completedClosings.map(c => {
                   const listing = Listings.getById(c.listing_id);
                   const payout = Math.round(c.agreed_price * c.commission_rate / 100);
+                  const myReview = Reviews.getMyReviewForClosing(c.id);
+                  const withinWindow = c.completed_at &&
+                    Date.now() - new Date(c.completed_at).getTime() < Reviews.REVIEW_WINDOW_DAYS * 86400000;
                   return (
                     <tr key={c.id}>
                       <td style={{ fontWeight: 500 }}>{listing?.title || 'Unknown'}</td>
@@ -217,6 +240,19 @@ export default function CloserDashboard({ onOpenChat }) {
                       <td>{c.commission_rate}%</td>
                       <td style={{ color: 'var(--green)', fontWeight: 500 }}>{formatMoney(payout)}</td>
                       <td style={{ color: 'var(--text-muted)' }}>{formatDate(c.completed_at)}</td>
+                      <td>
+                        {myReview ? (
+                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            {myReview.published_at ? '✓ Reviewed' : 'Review pending'}
+                          </span>
+                        ) : withinWindow ? (
+                          <button className="btn btn-secondary btn-sm" onClick={() => setShowReviewModal(c)}>
+                            <Star size={14} /> Review
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: 12, color: 'var(--text-light)' }}>Window closed</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
@@ -226,11 +262,43 @@ export default function CloserDashboard({ onOpenChat }) {
                   <tr style={{ fontWeight: 500, borderTop: '2px solid var(--border)' }}>
                     <td colSpan={3}>Total</td>
                     <td style={{ color: 'var(--green)' }}>{formatMoney(totalEarned)}</td>
-                    <td />
+                    <td colSpan={2} />
                   </tr>
                 </tfoot>
               )}
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {showReviewModal && (
+        <div className="modal-backdrop" onClick={() => setShowReviewModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">Review Seller</div>
+              <button className="modal-close" onClick={() => setShowReviewModal(null)}><span style={{ fontSize: 18 }}>×</span></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16, lineHeight: 1.5 }}>
+                Your review stays private until the seller also reviews you, or
+                until 21 days pass — whichever comes first. Neither side can read
+                the other's review during that window.
+              </p>
+              <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
+                {[1,2,3,4,5].map(s => (
+                  <button key={s} onClick={() => setReviewStars(s)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 28, color: s <= reviewStars ? 'var(--yellow)' : 'var(--border)' }}>
+                    ★
+                  </button>
+                ))}
+              </div>
+              <textarea className="textarea" placeholder="Write your review..." value={reviewText} onChange={e => setReviewText(e.target.value)} />
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowReviewModal(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleReview} disabled={!reviewText.trim()}>Submit Review</button>
+            </div>
           </div>
         </div>
       )}
