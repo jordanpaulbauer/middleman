@@ -1,18 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { MapPin, Calendar, Star, Shield, Camera, Edit3, Eye, Check, X, Settings, ExternalLink } from 'lucide-react';
-import { Auth, Profile, Reviews, Closings, Listings, Stripe } from '../services';
+import { Auth, Profile, Reviews, Closings, Listings, Stripe, Badges } from '../services';
 import { formatMoney, formatDate, CATEGORIES } from '../data/demo';
 import { useToast } from '../hooks/useToast';
 import Seo from '../components/Seo';
 import AsyncButton from '../components/AsyncButton';
-
-const BADGES = [
-  { key: 'verified', icon: '🛡️', label: 'Verified' },
-  { key: 'top_closer', icon: '🏆', label: 'Top Closer' },
-  { key: 'fast_responder', icon: '⚡', label: 'Fast Responder' },
-  { key: 'streak_5', icon: '🔥', label: '5+ Streak' },
-  { key: 'high_value', icon: '💎', label: 'High-Value Deals' },
-];
 
 export default function ProfilePage() {
   const { addToast } = useToast();
@@ -21,7 +13,6 @@ export default function ProfilePage() {
   const [editingBio, setEditingBio] = useState(false);
   const [bio, setBio] = useState('');
   const [showSettings, setShowSettings] = useState(false);
-  const [showBadges, setShowBadges] = useState(false);
   const [, setTick] = useState(0);
   const fileRef = useRef();
   const user = Auth.getUser();
@@ -179,14 +170,30 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Badges */}
-        <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-          {BADGES.slice(0, showBadges ? BADGES.length : 3).map(b => (
-            <span key={b.key} title={b.label} style={{ fontSize: 24, cursor: 'default' }}>{b.icon}</span>
+        {/* Badges — earned glow in color, unearned are dimmed with a how-to tooltip */}
+        <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {Badges.state().map(b => (
+            <span
+              key={b.key}
+              title={b.earned ? `${b.label} — ${b.description}` : `${b.label} — ${b.howTo}`}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '6px 10px', borderRadius: 999,
+                background: b.earned ? 'var(--rausch-light)' : 'var(--bg-subtle)',
+                border: '1px solid ' + (b.earned ? 'var(--rausch-light)' : 'var(--border-light)'),
+                color: b.earned ? 'var(--text)' : 'var(--text-muted)',
+                fontSize: 13, fontWeight: 500,
+                opacity: b.earned ? 1 : 0.7,
+                cursor: 'default',
+              }}
+            >
+              <span style={{
+                fontSize: 18,
+                filter: b.earned ? 'none' : 'grayscale(1)',
+              }}>{b.icon}</span>
+              {b.label}
+            </span>
           ))}
-          <button className="btn btn-ghost btn-sm" onClick={() => setShowBadges(!showBadges)}>
-            {showBadges ? 'Collapse' : 'Expand All'}
-          </button>
         </div>
       </div>
 

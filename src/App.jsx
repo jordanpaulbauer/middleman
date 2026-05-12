@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { Auth, Mode } from './services';
+import { Auth, Mode, Badges } from './services';
 import { subscribe } from './services';
+import BadgeEarnedModal from './components/BadgeEarnedModal';
 import { ToastProvider } from './hooks/useToast';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -43,6 +44,7 @@ export default function App() {
   const [user, setUser] = useState(Auth.getUser());
   const [, setTick] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [badgeCelebration, setBadgeCelebration] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -60,6 +62,24 @@ export default function App() {
 
   // Close the auth modal automatically once the user signs in.
   useEffect(() => { if (user) setShowAuthModal(false); }, [user]);
+
+  // Watch for newly-earned badges and pop the celebration modal once per
+  // unlock. The check runs every time services notify (which fires after
+  // any closing/message/profile update), so users see the modal moments
+  // after the action that triggered the badge.
+  useEffect(() => {
+    if (!user || badgeCelebration) return;
+    const newly = Badges.newlyEarned();
+    if (!newly.length) return;
+    const state = Badges.state();
+    setBadgeCelebration({
+      earned: newly,
+      remaining: state.filter(b => !b.earned),
+    });
+    // Persist immediately so we don't re-pop on the next notify; if the
+    // write fails we'll just show the modal again later, no harm done.
+    Badges.markSeen(newly.map(b => b.key)).catch(() => {});
+  }, [user, badgeCelebration]);
 
   const handleAuth = (u) => setUser(u);
   const openChat = (convId) => {
@@ -154,6 +174,14 @@ export default function App() {
         </main>
 
         <Footer />
+
+        {badgeCelebration && (
+          <BadgeEarnedModal
+            earned={badgeCelebration.earned}
+            remaining={badgeCelebration.remaining}
+            onClose={() => setBadgeCelebration(null)}
+          />
+        )}
       </div>
     </ToastProvider>
   );

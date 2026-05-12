@@ -1313,6 +1313,136 @@ export const Stripe = {
   getDashboardUrl: () => 'https://dashboard.stripe.com/',
 };
 
+// ── Badges ───────────────────────────────────────────────────────
+// Earned dynamically from the user's activity (no DB column per badge).
+// profiles.seen_badges tracks which earned badges the user has already
+// been celebrated for, so the congratulations modal fires exactly once.
+const BADGE_DEFINITIONS = [
+  {
+    key: 'verified',
+    icon: '🛡️',
+    label: 'Verified',
+    description: "Your Stripe payouts are live — buyers can pay through you with confidence.",
+    howTo: 'Connect Stripe and finish onboarding from Profile → Settings.',
+    check: (u) => Boolean(u?.stripe_payouts_enabled),
+  },
+  {
+    key: 'top_closer',
+    icon: '🏆',
+    label: 'Top Closer',
+    description: "Ten deals closed. You're not new at this anymore.",
+    howTo: 'Complete 10 deals as the closer.',
+    check: (_u, ctx) => ctx.completedAsCloser >= 10,
+  },
+  {
+    key: 'fast_responder',
+    icon: '⚡',
+    label: 'Fast Responder',
+    description: 'Your median chat reply is under an hour. Sellers love working with you.',
+    howTo: 'Keep your median message response time under 1 hour.',
+    check: (_u, ctx) => ctx.medianReplyMinutes != null && ctx.medianReplyMinutes < 60,
+  },
+  {
+    key: 'streak_5',
+    icon: '🔥',
+    label: '5+ Streak',
+    description: 'Five deals in a row, zero disputes. You are on fire.',
+    howTo: 'Complete 5 deals in a row without any disputes or refunds.',
+    check: (_u, ctx) => ctx.currentStreak >= 5,
+  },
+  {
+    key: 'high_value',
+    icon: '💎',
+    label: 'High-Value Deals',
+    description: 'You closed a deal worth $5,000 or more. Heavy hitter.',
+    howTo: 'Complete a deal with an agreed price of $5,000 or higher.',
+    check: (_u, ctx) => ctx.maxCompletedPrice >= 5000,
+  },
+];
+
+// Roll up the activity stats once so each badge's check() is O(1).
+function computeBadgeContext() {
+  const uid = currentUser?.id;
+  if (!uid) {
+    return { completedAsCloser: 0, currentStreak: 0, maxCompletedPrice: 0, medianReplyMinutes: null };
+  }
+  const myCompleted = closings
+    .filter(c => (c.closer_id === uid || c.seller_id === uid) && c.status === 'completed')
+    .sort((a, b) => new Date(b.completed_at || 0) - new Date(a.completed_at || 0));
+
+  const completedAsCloser = closings.filter(c => c.closer_id === uid && c.status === 'completed').length;
+
+  const maxCompletedPrice = myCompleted.reduce((max, c) => Math.max(max, c.agreed_price || 0), 0);
+
+  // Streak: consecutive completed closings (most recent first) with no dispute/refund breaking the chain.
+  // We walk both completed and disputed/refunded together to know when the chain breaks.
+  const allMine = closings
+    .filter(c => c.closer_id === uid || c.seller_id === uid)
+    .filter(c => c.status === 'completed' || c.status === 'disputed' || c.status === 'refunded')
+    .sort((a, b) => new Date(b.completed_at || b.created_at) - new Date(a.completed_at || a.created_at));
+  let currentStreak = 0;
+  for (const c of allMine) {
+    if (c.status === 'completed') currentStreak += 1;
+    else break;
+  }
+
+  // Median reply time: for each user-sent message, find the immediately preceding
+  // inbound message in the same conversation; if any, that's a reply gap.
+  const byConv = new Map();
+  messages.forEach(m => {
+    if (!byConv.has(m.conversation_id)) byConv.set(m.conversation_id, []);
+    byConv.get(m.conversation_id).push(m);
+  });
+  const gaps = [];
+  byConv.forEach(list => {
+    list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    for (let i = 1; i < list.length; i++) {
+      const cur = list[i];
+      const prev = list[i - 1];
+      if (cur.sender_id === uid && prev.sender_id !== uid) {
+        const minutes = (new Date(cur.created_at) - new Date(prev.created_at)) / 60000;
+        gaps.push(minutes);
+      }
+    }
+  });
+  let medianReplyMinutes = null;
+  if (gaps.length >= 3) { // require a few data points before the badge applies
+    gaps.sort((a, b) => a - b);
+    const mid = Math.floor(gaps.length / 2);
+    medianReplyMinutes = gaps.length % 2 ? gaps[mid] : (gaps[mid - 1] + gaps[mid]) / 2;
+  }
+
+  return { completedAsCloser, currentStreak, maxCompletedPrice, medianReplyMinutes };
+}
+
+export const Badges = {
+  ALL: BADGE_DEFINITIONS,
+
+  // Returns full badge objects with an `earned: boolean` flag — handy for UI
+  // that wants to show every badge, dim the unearned ones, and tooltip the
+  // how-to copy.
+  state: () => {
+    const ctx = computeBadgeContext();
+    return BADGE_DEFINITIONS.map(b => ({ ...b, earned: !!b.check(currentUser, ctx) }));
+  },
+
+  // Just the earned ones (full badge objects).
+  earned: () => Badges.state().filter(b => b.earned),
+
+  // Earned but not yet seen — these are what the congrats modal pops for.
+  newlyEarned: () => {
+    const seen = new Set(currentUser?.seen_badges || []);
+    return Badges.earned().filter(b => !seen.has(b.key));
+  },
+
+  // Persist that the user has now seen these badges so we don't pop again.
+  markSeen: async (keys) => {
+    if (!currentUser?.id || !isSupabaseEnabled) return;
+    const next = Array.from(new Set([...(currentUser.seen_badges || []), ...keys]));
+    await Profile.update({ seen_badges: next });
+  },
+};
+
 // ── Admin ────────────────────────────────────────────────────────
 // Moderation actions for accounts with profile.is_admin = true. All
 // privileged work happens inside edge functions (verified server-side).
@@ -1395,5 +1525,5 @@ export const Notifications = {
   },
 };
 
-const Services = { Auth, Mode, Listings, Closings, Chat, Reviews, Profile, Watchlist, Stripe, Notifications, Admin };
+const Services = { Auth, Mode, Listings, Closings, Chat, Reviews, Profile, Watchlist, Stripe, Notifications, Admin, Badges };
 export default Services;
