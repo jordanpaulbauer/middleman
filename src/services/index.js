@@ -418,7 +418,14 @@ export const Auth = {
   login: async (email, password) => {
     if (!email || !password) throw new Error('Email and password are required');
     if (isSupabaseEnabled) {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      // 12s timeout so a wedged supabase-js client doesn't trap the user
+      // on a frozen Continue button. If this fires, Auth.resetSession()
+      // gives them a recovery affordance.
+      const { data, error } = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        12000,
+        'signInWithPassword'
+      );
       if (error) throw new Error(error.message);
       // Profile fetch is normally fast (<200ms). If it hangs >8s the
       // supabase-js client is wedged — fall back to a minimal user from
@@ -498,6 +505,21 @@ export const Auth = {
       return;
     }
     writeAuth(null);
+  },
+
+  // Hard reset for when the supabase-js client is wedged and the user
+  // can't get past the login screen / a frozen modal. Nukes every
+  // sb-* localStorage key plus our own auth/mode keys and reloads the
+  // page so React state, supabase-js singleton, and any timers all
+  // rebuild from scratch. Exposed as a "Having trouble? Reset session"
+  // button so users don't need DevTools to recover.
+  resetSession: () => {
+    try {
+      Object.keys(localStorage)
+        .filter(k => k.startsWith('sb-') || k === AUTH_KEY || k === MODE_KEY)
+        .forEach(k => localStorage.removeItem(k));
+    } catch {}
+    window.location.reload();
   },
 
   socialAuth: async (provider) => {

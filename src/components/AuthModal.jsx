@@ -143,6 +143,24 @@ export default function AuthModal({ onAuth, onClose }) {
               <>Already have an account? <button type="button" onClick={() => setMode('login')} style={{ background: 'none', border: 'none', color: 'var(--text)', fontWeight: 500, cursor: 'pointer', fontSize: 13, textDecoration: 'underline' }}>Log in</button></>
             )}
           </p>
+
+          {/* One-click recovery for when the supabase-js client wedges and
+              login won't go through. Clears local session storage and
+              reloads — much friendlier than the DevTools dance. */}
+          <p style={{ marginTop: 8, fontSize: 12, color: 'var(--text-light)', textAlign: 'center' }}>
+            Having trouble?{' '}
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm('This will clear your local session and reload. Continue?')) {
+                  Auth.resetSession();
+                }
+              }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, textDecoration: 'underline' }}
+            >
+              Reset session
+            </button>
+          </p>
         </div>
       </div>
     </div>
