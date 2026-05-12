@@ -16,7 +16,7 @@ const SELLER_TABS = [
   { to: '/closings', label: 'Closings' },
 ];
 
-export default function Navbar({ onOpenChat, user }) {
+export default function Navbar({ onOpenChat, user, onOpenBadge }) {
   const navigate = useNavigate();
   const [showNotifs, setShowNotifs] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -127,7 +127,7 @@ export default function Navbar({ onOpenChat, user }) {
                 }}>{unreadNotifs}</span>
               )}
             </button>
-            {showNotifs && <NotificationDropdown onClose={() => setShowNotifs(false)} />}
+            {showNotifs && <NotificationDropdown onClose={() => setShowNotifs(false)} onOpenBadge={onOpenBadge} />}
           </div>
 
           {/* User Menu (Airbnb pill button: hamburger + avatar) */}

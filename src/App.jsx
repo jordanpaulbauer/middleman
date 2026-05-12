@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Auth, Mode, Badges } from './services';
 import { subscribe } from './services';
@@ -48,38 +48,57 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Single subscription that drives both user-state sync AND the badge
+  // check. The check has to run on every services notify (not just when
+  // `user` changes) because most badge triggers — creating a listing,
+  // completing a closing, getting a review — don't mutate currentUser.
+  // A ref guards against re-popping the modal while one's already open.
+  const badgeCelebrationRef = useRef(null);
+  useEffect(() => { badgeCelebrationRef.current = badgeCelebration; }, [badgeCelebration]);
+
   useEffect(() => {
+    const checkForNewBadges = () => {
+      if (!Auth.isAuthenticated()) return;
+      if (badgeCelebrationRef.current) return; // modal already open
+      const newly = Badges.newlyEarned();
+      if (!newly.length) return;
+      const state = Badges.state();
+      setBadgeCelebration({
+        earned: newly,
+        remaining: state.filter(b => !b.earned),
+      });
+      // Persist + drop notifications. Best-effort — if the write fails
+      // we'll just see the modal again next session, no data loss.
+      Badges.markSeen(newly.map(b => b.key)).catch(() => {});
+    };
+
     const unsub = subscribe(() => {
       const next = Auth.getUser();
       setUser(next);
       setTick(t => t + 1);
-      // Keep Sentry's user context in sync so error reports include the
-      // signed-in user. No-op when Sentry DSN isn't configured.
       setSentryUser(next);
+      checkForNewBadges();
     });
+    // Run once on mount in case the user already has unseen badges from
+    // a previous session.
+    checkForNewBadges();
     return unsub;
   }, []);
 
   // Close the auth modal automatically once the user signs in.
   useEffect(() => { if (user) setShowAuthModal(false); }, [user]);
 
-  // Watch for newly-earned badges and pop the celebration modal once per
-  // unlock. The check runs every time services notify (which fires after
-  // any closing/message/profile update), so users see the modal moments
-  // after the action that triggered the badge.
-  useEffect(() => {
-    if (!user || badgeCelebration) return;
-    const newly = Badges.newlyEarned();
-    if (!newly.length) return;
+  // Notification-click hook: opens the celebration modal for a specific
+  // badge so users can revisit the unlock from their inbox.
+  const openBadgeCelebration = (badgeKey) => {
+    const b = Badges.byKey(badgeKey);
+    if (!b) return;
     const state = Badges.state();
     setBadgeCelebration({
-      earned: newly,
-      remaining: state.filter(b => !b.earned),
+      earned: [b],
+      remaining: state.filter(s => !s.earned),
     });
-    // Persist immediately so we don't re-pop on the next notify; if the
-    // write fails we'll just show the modal again later, no harm done.
-    Badges.markSeen(newly.map(b => b.key)).catch(() => {});
-  }, [user, badgeCelebration]);
+  };
 
   const handleAuth = (u) => setUser(u);
   const openChat = (convId) => {
@@ -142,7 +161,7 @@ export default function App() {
   return (
     <ToastProvider>
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <Navbar onOpenChat={openChat} user={user} />
+        <Navbar onOpenChat={openChat} user={user} onOpenBadge={openBadgeCelebration} />
 
         <main style={{ flex: 1 }}>
           <Routes>

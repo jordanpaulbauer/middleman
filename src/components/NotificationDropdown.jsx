@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Trash2, DollarSign, MessageCircle, Tag, Star, CheckCircle } from 'lucide-react';
+import { Check, Trash2, DollarSign, MessageCircle, Tag, Star, CheckCircle, Sparkles } from 'lucide-react';
 import { Notifications } from '../services';
 import { formatTimeAgo } from '../data/demo';
 
@@ -10,6 +10,7 @@ const ICONS = {
   claim: Tag,
   message: MessageCircle,
   review: Star,
+  badge: Sparkles,
 };
 
 const COLORS = {
@@ -18,15 +19,21 @@ const COLORS = {
   claim: 'var(--rausch)',
   message: 'var(--rausch)',
   review: 'var(--yellow)',
+  badge: 'var(--rausch)',
 };
 
-export default function NotificationDropdown({ onClose }) {
+export default function NotificationDropdown({ onClose, onOpenBadge }) {
   const navigate = useNavigate();
   const notifs = Notifications.get();
 
   const handleClick = (n) => {
     Notifications.markRead(n.id);
-    if (n.type === 'closing' || n.type === 'completed') navigate('/closings');
+    if (n.type === 'badge') {
+      // Re-open the celebration modal for this specific badge so users
+      // can see what they earned and which ones are still locked.
+      const key = n.data?.badge_key;
+      if (key && onOpenBadge) onOpenBadge(key);
+    } else if (n.type === 'closing' || n.type === 'completed') navigate('/closings');
     else if (n.type === 'claim') navigate('/browse');
     else if (n.type === 'review') navigate('/profile');
     onClose();
@@ -64,7 +71,9 @@ export default function NotificationDropdown({ onClose }) {
                 background: `${COLORS[n.type]}15`, color: COLORS[n.type],
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <Icon size={18} />
+                {n.type === 'badge' && n.data?.icon
+                  ? <span style={{ fontSize: 18 }}>{n.data.icon}</span>
+                  : <Icon size={18} />}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: n.read ? 400 : 600, color: 'var(--text)' }}>{n.title}</div>

@@ -1546,11 +1546,39 @@ export const Badges = {
     return Badges.earned().filter(b => !seen.has(b.key));
   },
 
-  // Persist that the user has now seen these badges so we don't pop again.
+  // Look up a full badge definition by key. Used by the notifications
+  // dropdown so a click on a "badge earned" notification can re-open
+  // the celebration modal with the right content.
+  byKey: (key) => BADGE_DEFINITIONS.find(b => b.key === key) || null,
+
+  // Persist that the user has now seen these badges so we don't pop
+  // the celebration modal again, and drop a notification per badge
+  // so the unlock is permanently recorded in the user's inbox.
   markSeen: async (keys) => {
-    if (!currentUser?.id || !isSupabaseEnabled) return;
-    const next = Array.from(new Set([...(currentUser.seen_badges || []), ...keys]));
+    if (!currentUser?.id || !isSupabaseEnabled || !keys?.length) return;
+    const alreadySeen = new Set(currentUser.seen_badges || []);
+    const truly_new = keys.filter(k => !alreadySeen.has(k));
+    if (!truly_new.length) return;
+    const next = Array.from(new Set([...(currentUser.seen_badges || []), ...truly_new]));
     await Profile.update({ seen_badges: next });
+    // Best-effort notification inserts — failure here doesn't roll back
+    // the celebration (user already saw the modal). RLS allows authenticated
+    // self-inserts when type='badge'.
+    for (const key of truly_new) {
+      const b = Badges.byKey(key);
+      if (!b) continue;
+      try {
+        await supabase.from('notifications').insert({
+          user_id: currentUser.id,
+          type: 'badge',
+          title: `Badge earned: ${b.label}`,
+          body: b.description,
+          data: { badge_key: b.key, icon: b.icon },
+        });
+      } catch (err) {
+        console.warn('[Badges] notification insert failed:', err);
+      }
+    }
   },
 };
 
