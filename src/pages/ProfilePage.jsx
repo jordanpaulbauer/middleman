@@ -48,9 +48,21 @@ export default function ProfilePage() {
   const handlePhoto = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    await Profile.uploadPhoto(file);
-    addToast({ type: 'success', title: 'Photo Updated' });
-    setTick(t => t + 1);
+    try {
+      await Profile.uploadPhoto(file);
+      addToast({ type: 'success', title: 'Photo Updated' });
+      setTick(t => t + 1);
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Could not update photo',
+        message: err?.message || 'Try a different image.',
+      });
+      console.error('[ProfilePage] uploadPhoto failed:', err);
+    } finally {
+      // Reset the input so the same file can be picked again after an error.
+      if (e.target) e.target.value = '';
+    }
   };
 
   const saveBio = async () => {

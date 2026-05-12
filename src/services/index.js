@@ -1148,25 +1148,44 @@ export const Profile = {
     notify();
     return currentUser;
   },
+  // Avatar upload. We compress the image client-side to ~400px square
+  // and store it as a base64 data URL on profiles.photo_url. This avoids
+  // the Supabase Storage transport (which currently hangs in this
+  // environment) and keeps the row size modest — a 400px JPEG at q=0.8
+  // weighs in around 25-40KB, fine to inline.
   uploadPhoto: async (file) => {
-    if (isSupabaseEnabled && currentUser?.id) {
-      const ext = (file.name?.split('.').pop() || 'jpg').toLowerCase();
-      const path = `${currentUser.id}/avatar-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from('avatars')
-        .upload(path, file, { contentType: file.type, upsert: true });
-      if (upErr) throw new Error(upErr.message);
-      const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
-      const url = pub.publicUrl;
-      await Profile.update({ photo_url: url });
-      return url;
-    }
-    const url = URL.createObjectURL(file);
-    currentUser = { ...currentUser, photo_url: url };
-    notify();
-    return url;
+    if (!currentUser?.id) throw new Error('Sign in first');
+    const dataUrl = await compressAvatar(file);
+    await Profile.update({ photo_url: dataUrl });
+    return dataUrl;
   },
 };
+
+function compressAvatar(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read file'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Could not decode image'));
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        const max = 400;
+        if (w > max || h > max) {
+          if (w > h) { h = Math.round(h * max / w); w = max; }
+          else { w = Math.round(w * max / h); h = max; }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 // ── Watchlist ────────────────────────────────────────────────────
 export const Watchlist = {
