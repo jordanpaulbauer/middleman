@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { X, Heart, Bell, MapPin, Tag, Zap, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Listings, Watchlist, Chat, Auth } from '../services';
+import { X, Heart, Bell, MapPin, Tag, Zap, MessageCircle, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react';
+import { Listings, Watchlist, Chat, Auth, Admin } from '../services';
 import { getUserById, formatMoney, getCountdownColor } from '../data/demo';
 import CountdownTimer from './CountdownTimer';
+import AdminRemoveListingModal from './AdminRemoveListingModal';
 import { useToast } from '../hooks/useToast';
 
 export default function ListingDetailModal({ listing, onClose, onOpenChat, onRefresh }) {
   const { addToast } = useToast();
   const [photoIdx, setPhotoIdx] = useState(0);
+  const [showAdminRemove, setShowAdminRemove] = useState(false);
   const [, setTick] = useState(0);
   const user = Auth.getUser();
+  const isAdmin = Admin.isAdmin();
 
   const seller = getUserById(listing.seller_id);
   const claimer = listing.claimed_by ? getUserById(listing.claimed_by) : null;
@@ -55,7 +58,24 @@ export default function ListingDetailModal({ listing, onClose, onOpenChat, onRef
         {/* Header */}
         <div className="modal-header">
           <div className="modal-title">{listing.title}</div>
-          <button className="modal-close" onClick={onClose}><X size={16} /></button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {isAdmin && (
+              <button
+                onClick={() => setShowAdminRemove(true)}
+                title="Remove listing (admin)"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  background: 'transparent', color: 'var(--rausch)',
+                  border: '1px solid var(--rausch)', borderRadius: 999,
+                  padding: '4px 12px', fontSize: 12, fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                <ShieldAlert size={14} /> Remove
+              </button>
+            )}
+            <button className="modal-close" onClick={onClose}><X size={16} /></button>
+          </div>
         </div>
 
         <div className="modal-body">
@@ -193,6 +213,14 @@ export default function ListingDetailModal({ listing, onClose, onOpenChat, onRef
           </div>
         </div>
       </div>
+
+      {showAdminRemove && (
+        <AdminRemoveListingModal
+          listing={listing}
+          onClose={() => setShowAdminRemove(false)}
+          onRemoved={() => { setShowAdminRemove(false); onClose?.(); onRefresh?.(); }}
+        />
+      )}
     </div>
   );
 }
