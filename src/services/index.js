@@ -346,23 +346,34 @@ if (import.meta.hot) {
 let authStateSub = null;
 if (isSupabaseEnabled) {
   (async () => {
-    // Self-healing session restore: if supabase-js wedges on a stale token
-    // (happens after broken signups or killed-mid-auth tabs), getSession()
-    // hangs forever. Race it against a 5s timeout. If it loses, clear the
-    // sb-* keys and try once more — the second call returns null cleanly
-    // and the user sees the login screen instead of an infinite spinner.
+    // Self-healing session restore. Two-stage recovery:
+    //   1. Give getSession() 12s on first try. Mobile networks can be
+    //      slow; the prior 5s timeout was too aggressive and was killing
+    //      legitimate sessions (users had to re-log on every refresh).
+    //   2. Only if THAT first attempt fails AND retries also fail do we
+    //      nuke sb-* localStorage. Avoids destroying valid sessions on
+    //      transient network blips.
     let session = null;
     try {
-      const result = await withTimeout(supabase.auth.getSession(), 5000, 'getSession');
+      const result = await withTimeout(supabase.auth.getSession(), 12000, 'getSession');
       session = result?.data?.session || null;
     } catch (err) {
-      console.warn('[Auth] session restore wedged, clearing stale tokens:', err.message);
-      clearSupabaseAuthStorage();
+      console.warn('[Auth] session restore slow, retrying without clearing:', err.message);
+      // Second try without clearing — most slow-mobile cases recover here.
       try {
-        const retry = await withTimeout(supabase.auth.getSession(), 5000, 'getSession (retry)');
+        const retry = await withTimeout(supabase.auth.getSession(), 12000, 'getSession (retry)');
         session = retry?.data?.session || null;
       } catch (err2) {
-        console.warn('[Auth] retry also failed; continuing without session');
+        // Only NOW do we suspect the stored tokens are genuinely bad.
+        // Clear and try one more time to surface a clean unauthenticated state.
+        console.warn('[Auth] both attempts failed, clearing stale tokens:', err2.message);
+        clearSupabaseAuthStorage();
+        try {
+          const finalTry = await withTimeout(supabase.auth.getSession(), 8000, 'getSession (after clear)');
+          session = finalTry?.data?.session || null;
+        } catch (err3) {
+          console.warn('[Auth] giving up on session restore; continuing without session');
+        }
       }
     }
     if (session?.user) {
