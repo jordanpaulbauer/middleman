@@ -91,7 +91,16 @@ Deno.serve(async (req) => {
     const fromAddress = Deno.env.get("ADMIN_EMAIL_FROM") ||
       "MIDDLEMAN <onboarding@resend.dev>";
     if (resendKey && seller?.email) {
+      // Hard 10s timeout so a slow Resend response can't trap the user
+      // staring at a "Removing…" spinner. The listing is already deleted
+      // by this point — the email is best-effort.
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 10_000);
       try {
+        console.log("[admin-remove-listing] sending email via Resend", {
+          to: seller.email,
+          from: fromAddress,
+        });
         const emailRes = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
@@ -109,14 +118,24 @@ Deno.serve(async (req) => {
               customMessage: custom_message || null,
             }),
           }),
+          signal: ac.signal,
         });
         if (emailRes.ok) {
           emailSent = true;
+          console.log("[admin-remove-listing] email sent OK");
         } else {
-          emailError = `Resend ${emailRes.status}: ${await emailRes.text()}`;
+          const body = await emailRes.text();
+          emailError = `Resend ${emailRes.status}: ${body}`;
+          console.warn("[admin-remove-listing] email failed", emailError);
         }
       } catch (err) {
-        emailError = (err as Error).message;
+        const msg = (err as Error).name === "AbortError"
+          ? "Resend request timed out after 10s"
+          : (err as Error).message;
+        emailError = msg;
+        console.warn("[admin-remove-listing] email error", msg);
+      } finally {
+        clearTimeout(timer);
       }
     } else if (!resendKey) {
       emailError = "RESEND_API_KEY not set — skipping email";
