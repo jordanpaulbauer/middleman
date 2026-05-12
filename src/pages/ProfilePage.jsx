@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { MapPin, Calendar, Star, Shield, Camera, Edit3, Eye, Check, X, Settings, ExternalLink } from 'lucide-react';
-import { Auth, Profile, Reviews, Closings, Listings, Stripe, Badges } from '../services';
+import { Auth, Profile, Reviews, Closings, Listings, Stripe, Badges, isActiveRecently } from '../services';
 import { formatMoney, formatDate, CATEGORIES } from '../data/demo';
 import { useToast } from '../hooks/useToast';
 import Seo from '../components/Seo';
@@ -105,9 +105,12 @@ export default function ProfilePage() {
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
               <h1 style={{ fontSize: 24, fontWeight: 500 }}>{user?.full_name}</h1>
-              <span className="badge badge-blue">{user?.role}</span>
-              <Shield size={16} color="var(--blue)" />
-              <div className="pulse-dot" />
+              {user?.stripe_payouts_enabled && (
+                <Shield size={16} color="var(--blue)" aria-label="Stripe payouts enabled" />
+              )}
+              {isActiveRecently(user) && (
+                <div className="pulse-dot" title="Active in the last 24 hours" />
+              )}
             </div>
             <div style={{ display: 'flex', gap: 16, fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>
               {user?.location && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} /> {user.location}</span>}

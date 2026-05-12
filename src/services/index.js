@@ -366,6 +366,7 @@ if (isSupabaseEnabled) {
       cacheProfile(currentUser);
       await refreshAll();
       startRealtime();
+      Profile.touchLastSeen();
     } else {
       // Even logged-out users may want to read public listings (for /listing/:id).
       await loadListings();
@@ -380,6 +381,7 @@ if (isSupabaseEnabled) {
       cacheProfile(currentUser);
       await refreshAll();
       startRealtime();
+      Profile.touchLastSeen();
     } else {
       currentUser = null;
       authenticated = false;
@@ -1159,7 +1161,35 @@ export const Profile = {
     await Profile.update({ photo_url: dataUrl });
     return dataUrl;
   },
+
+  // Best-effort write of last_seen_at so the public-presence dot is
+  // accurate. Throttled to once per 5 min and intentionally silent —
+  // we don't notify subscribers because presence shouldn't cause
+  // unrelated re-renders, and we don't throw on failure because a
+  // miss is not user-visible.
+  touchLastSeen: async () => {
+    if (!isSupabaseEnabled || !currentUser?.id) return;
+    const now = Date.now();
+    if (Profile._lastTouchAt && now - Profile._lastTouchAt < 5 * 60 * 1000) return;
+    Profile._lastTouchAt = now;
+    try {
+      const iso = new Date(now).toISOString();
+      await supabase.from('profiles').update({ last_seen_at: iso }).eq('id', currentUser.id);
+      currentUser = { ...currentUser, last_seen_at: iso };
+    } catch (err) {
+      console.warn('[Profile] touchLastSeen failed:', err);
+    }
+  },
+  _lastTouchAt: 0,
 };
+
+// "Active recently" presence: returns true if the profile pinged the
+// server within the last 24h. Used for the green dot on profile headers.
+const ACTIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
+export function isActiveRecently(profile) {
+  if (!profile?.last_seen_at) return false;
+  return Date.now() - new Date(profile.last_seen_at).getTime() < ACTIVE_WINDOW_MS;
+}
 
 function compressAvatar(file) {
   return new Promise((resolve, reject) => {

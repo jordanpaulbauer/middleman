@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MapPin, Calendar, Star, Shield, Flag } from 'lucide-react';
-import { Reviews, Closings, Listings, Profile, Auth } from '../services';
+import { Reviews, Closings, Listings, Profile, Auth, isActiveRecently } from '../services';
 import { formatDate } from '../data/demo';
 import Seo from '../components/Seo';
 import ReportModal from '../components/ReportModal';
@@ -66,14 +66,25 @@ export default function PublicProfilePage() {
               fontSize: 28, fontWeight: 500, margin: 0,
               letterSpacing: '-0.4px',
             }}>{profile.full_name}</h1>
-            {profile.is_verified && (
-              <span title="Verified" style={{
+            {profile.stripe_payouts_enabled && (
+              <span title="Verified — Stripe payouts enabled" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
                 background: 'var(--blue-light)', color: 'var(--blue)',
                 padding: '4px 10px', borderRadius: 999,
                 fontSize: 12, fontWeight: 500,
               }}>
                 <Shield size={13} /> Verified
+              </span>
+            )}
+            {isActiveRecently(profile) && (
+              <span title="Active in the last 24 hours" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                color: 'var(--green)', fontSize: 13, fontWeight: 500,
+              }}>
+                <span style={{
+                  width: 8, height: 8, borderRadius: '50%', background: 'var(--green)',
+                }} />
+                Active
               </span>
             )}
           </div>
