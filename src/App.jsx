@@ -18,6 +18,7 @@ import ProfilePage from './pages/ProfilePage';
 import MessagesPage from './pages/MessagesPage';
 import AboutPage from './pages/AboutPage';
 import FAQPage from './pages/FAQPage';
+import LandingPage from './pages/LandingPage';
 import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
 import CookiesPage from './pages/CookiesPage';
@@ -34,7 +35,7 @@ import { setSentryUser } from './lib/sentry';
 // state and need to render their own dedicated page (no nav, no auth gate).
 // /pay/:closingId is the buyer checkout — buyers don't have accounts.
 const PUBLIC_PATHS = new Set([
-  '/about', '/faq', '/help', '/terms', '/privacy', '/cookies',
+  '/', '/about', '/faq', '/help', '/terms', '/privacy', '/cookies',
   '/auth/reset', '/auth/verify',
 ]);
 const PUBLIC_PREFIXES = ['/listing/', '/u/', '/pay/'];
@@ -225,6 +226,7 @@ export default function App() {
 function PublicRoutes({ onRequireAuth }) {
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="/faq" element={<FAQPage />} />
       <Route path="/help" element={<Navigate to="/faq" replace />} />
