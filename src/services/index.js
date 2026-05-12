@@ -1318,6 +1318,15 @@ export const Stripe = {
 // profiles.seen_badges tracks which earned badges the user has already
 // been celebrated for, so the congratulations modal fires exactly once.
 const BADGE_DEFINITIONS = [
+  // Profile-stage milestones
+  {
+    key: 'profile_pro',
+    icon: '✨',
+    label: 'Profile Pro',
+    description: 'Your profile is 100% complete. People know who they\'re working with.',
+    howTo: 'Fill every Profile Completeness item — bio, photo, payouts, first closing, first review.',
+    check: (_u, ctx) => ctx.profileCompletePct >= 100,
+  },
   {
     key: 'verified',
     icon: '🛡️',
@@ -1326,6 +1335,42 @@ const BADGE_DEFINITIONS = [
     howTo: 'Connect Stripe and finish onboarding from Profile → Settings.',
     check: (u) => Boolean(u?.stripe_payouts_enabled),
   },
+  {
+    key: 'first_payout',
+    icon: '💰',
+    label: 'First Payout',
+    description: 'First deal completed. The money\'s real now.',
+    howTo: 'Complete your first closing — as either the seller or the closer.',
+    check: (_u, ctx) => ctx.completedAsParty >= 1,
+  },
+
+  // Listing milestones (seller-focused)
+  {
+    key: 'lister_5',
+    icon: '📋',
+    label: '5 Listings',
+    description: 'You\'ve put five items up for grabs. Inventory is the engine.',
+    howTo: 'Post 5 listings.',
+    check: (_u, ctx) => ctx.listingsCreated >= 5,
+  },
+  {
+    key: 'lister_50',
+    icon: '📚',
+    label: '50 Listings',
+    description: 'Fifty listings. You run an actual catalog now.',
+    howTo: 'Post 50 listings.',
+    check: (_u, ctx) => ctx.listingsCreated >= 50,
+  },
+  {
+    key: 'lister_100',
+    icon: '👑',
+    label: '100 Listings',
+    description: 'One hundred listings. Royalty.',
+    howTo: 'Post 100 listings.',
+    check: (_u, ctx) => ctx.listingsCreated >= 100,
+  },
+
+  // Closer-focused
   {
     key: 'top_closer',
     icon: '🏆',
@@ -1364,15 +1409,41 @@ const BADGE_DEFINITIONS = [
 function computeBadgeContext() {
   const uid = currentUser?.id;
   if (!uid) {
-    return { completedAsCloser: 0, currentStreak: 0, maxCompletedPrice: 0, medianReplyMinutes: null };
+    return {
+      completedAsCloser: 0, completedAsParty: 0, currentStreak: 0,
+      maxCompletedPrice: 0, medianReplyMinutes: null,
+      listingsCreated: 0, profileCompletePct: 0,
+    };
   }
   const myCompleted = closings
     .filter(c => (c.closer_id === uid || c.seller_id === uid) && c.status === 'completed')
     .sort((a, b) => new Date(b.completed_at || 0) - new Date(a.completed_at || 0));
 
   const completedAsCloser = closings.filter(c => c.closer_id === uid && c.status === 'completed').length;
+  const completedAsParty = myCompleted.length;
 
   const maxCompletedPrice = myCompleted.reduce((max, c) => Math.max(max, c.agreed_price || 0), 0);
+
+  // Total listings the user has ever posted (any status — including sold).
+  const listingsCreated = listings.filter(l => l.seller_id === uid).length;
+
+  // Profile Completeness mirrors the ProfilePage criteria. We compute it
+  // here so the Profile Pro badge unlocks the moment the bar hits 100%.
+  // "Account Verified" is a placeholder gate in the UI (always true), so
+  // it's treated the same way here.
+  const myReviewsCount = reviews.filter(r => (r.closer_id === uid || r.seller_id === uid)).length;
+  const profileCriteria = [
+    Boolean(currentUser?.bio),
+    true, // Account Verified placeholder — matches ProfilePage
+    completedAsParty >= 1,
+    completedAsParty >= 5,
+    myReviewsCount > 0,
+    Boolean(currentUser?.photo_url),
+    Boolean(currentUser?.stripe_payouts_enabled),
+  ];
+  const profileCompletePct = Math.round(
+    (profileCriteria.filter(Boolean).length / profileCriteria.length) * 100
+  );
 
   // Streak: consecutive completed closings (most recent first) with no dispute/refund breaking the chain.
   // We walk both completed and disputed/refunded together to know when the chain breaks.
@@ -1412,7 +1483,11 @@ function computeBadgeContext() {
     medianReplyMinutes = gaps.length % 2 ? gaps[mid] : (gaps[mid - 1] + gaps[mid]) / 2;
   }
 
-  return { completedAsCloser, currentStreak, maxCompletedPrice, medianReplyMinutes };
+  return {
+    completedAsCloser, completedAsParty,
+    currentStreak, maxCompletedPrice, medianReplyMinutes,
+    listingsCreated, profileCompletePct,
+  };
 }
 
 export const Badges = {
