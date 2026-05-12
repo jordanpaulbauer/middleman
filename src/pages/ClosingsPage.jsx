@@ -247,7 +247,24 @@ export default function ClosingsPage() {
                         </AsyncButton>
                       )}
                       {c.status === 'completed' && (
-                        <span className="badge badge-green"><CheckCircle size={12} /> Completed {formatDate(c.completed_at)}</span>
+                        <>
+                          <span className="badge badge-green"><CheckCircle size={12} /> Completed {formatDate(c.completed_at)}</span>
+                          {/* Payout-pending pill — shown to the party whose */}
+                          {/* transfer was deferred because they hadn't finished */}
+                          {/* Stripe Connect onboarding at finalize time. */}
+                          {(
+                            (c.pending_seller_payout && c.seller_id === user?.id) ||
+                            (c.pending_closer_payout && c.closer_id === user?.id)
+                          ) && (
+                            <span
+                              className="badge"
+                              title="Funds are held by MIDDLEMAN and will release as soon as you finish Stripe onboarding."
+                              style={{ background: 'var(--yellow-light)', color: 'var(--yellow)' }}
+                            >
+                              <AlertTriangle size={12} /> Payout pending — connect Stripe
+                            </span>
+                          )}
+                        </>
                       )}
                       {c.status === 'disputed' && (
                         <span className="badge" style={{ background: 'var(--red-light)', color: 'var(--red)' }}>

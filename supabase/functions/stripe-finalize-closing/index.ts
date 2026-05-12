@@ -65,16 +65,16 @@ Deno.serve(async (req) => {
       return json({ error: "no payment intent on this closing" }, 409);
     }
 
-    // Get seller + closer connected accounts.
+    // Get seller + closer connected accounts. Either party may not have
+    // finished Connect onboarding yet — that's fine, we'll mark their
+    // payout pending and the stripe-webhook (account.updated) flushes
+    // it once they complete onboarding.
     const { data: parties } = await admin
       .from("profiles")
       .select("id, stripe_account_id")
       .in("id", [closing.seller_id, closing.closer_id]);
     const seller = parties?.find(p => p.id === closing.seller_id);
     const closerProfile = parties?.find(p => p.id === closing.closer_id);
-    if (!seller?.stripe_account_id || !closerProfile?.stripe_account_id) {
-      return json({ error: "parties not fully onboarded" }, 409);
-    }
 
     // Use the source PaymentIntent's charge ID so transfers are reversed if
     // the original charge is refunded later.
@@ -86,30 +86,42 @@ Deno.serve(async (req) => {
     const closerCommission = Math.round(total * (closing.commission_bps as number) / 10000);
     const sellerNet = total - platformFee - closerCommission;
 
+    // Try the seller transfer. If they don't have Connect yet, mark pending.
     let sellerTransferId = closing.stripe_transfer_seller_id as string | null;
+    let pendingSellerPayout = false;
     if (!sellerTransferId) {
-      const t = await stripe.transfers.create({
-        amount: sellerNet,
-        currency: "usd",
-        destination: seller.stripe_account_id,
-        source_transaction: sourceTransaction,
-        metadata: { closing_id, role: "seller" },
-        description: `MIDDLEMAN seller payout ${closing_id}`,
-      });
-      sellerTransferId = t.id;
+      if (seller?.stripe_account_id) {
+        const t = await stripe.transfers.create({
+          amount: sellerNet,
+          currency: "usd",
+          destination: seller.stripe_account_id,
+          source_transaction: sourceTransaction,
+          metadata: { closing_id, role: "seller" },
+          description: `MIDDLEMAN seller payout ${closing_id}`,
+        });
+        sellerTransferId = t.id;
+      } else {
+        pendingSellerPayout = true;
+      }
     }
 
+    // Same for the closer.
     let closerTransferId = closing.stripe_transfer_closer_id as string | null;
+    let pendingCloserPayout = false;
     if (!closerTransferId) {
-      const t = await stripe.transfers.create({
-        amount: closerCommission,
-        currency: "usd",
-        destination: closerProfile.stripe_account_id,
-        source_transaction: sourceTransaction,
-        metadata: { closing_id, role: "closer" },
-        description: `MIDDLEMAN closer commission ${closing_id}`,
-      });
-      closerTransferId = t.id;
+      if (closerProfile?.stripe_account_id) {
+        const t = await stripe.transfers.create({
+          amount: closerCommission,
+          currency: "usd",
+          destination: closerProfile.stripe_account_id,
+          source_transaction: sourceTransaction,
+          metadata: { closing_id, role: "closer" },
+          description: `MIDDLEMAN closer commission ${closing_id}`,
+        });
+        closerTransferId = t.id;
+      } else {
+        pendingCloserPayout = true;
+      }
     }
 
     const completedAt = new Date().toISOString();
@@ -119,6 +131,8 @@ Deno.serve(async (req) => {
         status: "completed",
         stripe_transfer_seller_id: sellerTransferId,
         stripe_transfer_closer_id: closerTransferId,
+        pending_seller_payout: pendingSellerPayout,
+        pending_closer_payout: pendingCloserPayout,
         completed_at: completedAt,
       })
       .eq("id", closing_id);
@@ -137,6 +151,8 @@ Deno.serve(async (req) => {
       payload: {
         seller_transfer: sellerTransferId,
         closer_transfer: closerTransferId,
+        pending_seller_payout: pendingSellerPayout,
+        pending_closer_payout: pendingCloserPayout,
         seller_net_cents: sellerNet,
         closer_commission_cents: closerCommission,
         platform_fee_cents: platformFee,
@@ -146,6 +162,8 @@ Deno.serve(async (req) => {
     return json({
       transfer_seller_id: sellerTransferId,
       transfer_closer_id: closerTransferId,
+      pending_seller_payout: pendingSellerPayout,
+      pending_closer_payout: pendingCloserPayout,
       completed_at: completedAt,
     });
   } catch (err) {

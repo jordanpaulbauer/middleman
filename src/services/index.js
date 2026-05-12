@@ -83,6 +83,8 @@ function dbClosingToUi(row) {
     status: row.status,
     stripe_payment_intent_id: row.stripe_payment_intent_id,
     stripe_checkout_url: row.stripe_checkout_url,
+    pending_seller_payout: !!row.pending_seller_payout,
+    pending_closer_payout: !!row.pending_closer_payout,
     created_at: row.created_at,
     completed_at: row.completed_at,
   };

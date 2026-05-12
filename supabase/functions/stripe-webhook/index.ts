@@ -114,6 +114,31 @@ Deno.serve(async (req) => {
           .eq("id", closingId);
         break;
       }
+      case "account.updated": {
+        // Sync the user's payouts_enabled flag and, if they just unlocked
+        // payouts, fire any transfers that were deferred when their
+        // closings finalized before they'd finished Connect onboarding.
+        const account = event.data.object as Stripe.Account;
+        const { data: profile } = await admin
+          .from("profiles")
+          .select("id, stripe_payouts_enabled")
+          .eq("stripe_account_id", account.id)
+          .single();
+        if (!profile) break;
+
+        const newPayoutsEnabled = !!account.payouts_enabled;
+        await admin
+          .from("profiles")
+          .update({ stripe_payouts_enabled: newPayoutsEnabled })
+          .eq("id", profile.id);
+
+        // If payouts just became available, flush any pending payouts
+        // for closings where this user is the seller or closer.
+        if (newPayoutsEnabled) {
+          await flushPendingPayouts(stripe, admin, profile.id, account.id);
+        }
+        break;
+      }
       default:
         // Ignore everything else.
         break;
@@ -124,3 +149,84 @@ Deno.serve(async (req) => {
     return new Response(`handler error: ${err?.message}`, { status: 500 });
   }
 });
+
+// Triggered from the account.updated handler when a user completes Connect
+// onboarding (payouts_enabled flips true). Finds any completed closings
+// where this user's payout was deferred and fires the transfers now.
+// Wraps each transfer in its own try so one Stripe error doesn't strand
+// the rest. Source_transaction ties the transfer back to the original
+// charge so refunds correctly reverse the flow.
+async function flushPendingPayouts(
+  stripe: Stripe,
+  admin: ReturnType<typeof createClient>,
+  userId: string,
+  stripeAccountId: string,
+) {
+  // Pending seller payouts where this user is the seller.
+  const { data: sellerClosings } = await admin
+    .from("closings")
+    .select("*")
+    .eq("seller_id", userId)
+    .eq("pending_seller_payout", true);
+
+  for (const c of sellerClosings || []) {
+    try {
+      const total = c.agreed_price_cents as number;
+      const platformFee = Math.round(total * (c.platform_fee_bps as number) / 10000);
+      const closerCommission = Math.round(total * (c.commission_bps as number) / 10000);
+      const sellerNet = total - platformFee - closerCommission;
+      let sourceTransaction: string | undefined;
+      if (c.stripe_payment_intent_id) {
+        const pi = await stripe.paymentIntents.retrieve(c.stripe_payment_intent_id);
+        sourceTransaction = (pi.latest_charge as string) || undefined;
+      }
+      const t = await stripe.transfers.create({
+        amount: sellerNet,
+        currency: "usd",
+        destination: stripeAccountId,
+        source_transaction: sourceTransaction,
+        metadata: { closing_id: c.id, role: "seller", flushed_from_pending: "true" },
+        description: `MIDDLEMAN seller payout (deferred) ${c.id}`,
+      });
+      await admin
+        .from("closings")
+        .update({ stripe_transfer_seller_id: t.id, pending_seller_payout: false })
+        .eq("id", c.id);
+    } catch (err) {
+      console.warn(`[stripe-webhook] failed to flush seller payout for closing ${c.id}:`, err);
+    }
+  }
+
+  // Pending closer commissions where this user is the closer.
+  const { data: closerClosings } = await admin
+    .from("closings")
+    .select("*")
+    .eq("closer_id", userId)
+    .eq("pending_closer_payout", true);
+
+  for (const c of closerClosings || []) {
+    try {
+      const total = c.agreed_price_cents as number;
+      const closerCommission = Math.round(total * (c.commission_bps as number) / 10000);
+      let sourceTransaction: string | undefined;
+      if (c.stripe_payment_intent_id) {
+        const pi = await stripe.paymentIntents.retrieve(c.stripe_payment_intent_id);
+        sourceTransaction = (pi.latest_charge as string) || undefined;
+      }
+      const t = await stripe.transfers.create({
+        amount: closerCommission,
+        currency: "usd",
+        destination: stripeAccountId,
+        source_transaction: sourceTransaction,
+        metadata: { closing_id: c.id, role: "closer", flushed_from_pending: "true" },
+        description: `MIDDLEMAN closer commission (deferred) ${c.id}`,
+      });
+      await admin
+        .from("closings")
+        .update({ stripe_transfer_closer_id: t.id, pending_closer_payout: false })
+        .eq("id", c.id);
+    } catch (err) {
+      console.warn(`[stripe-webhook] failed to flush closer payout for closing ${c.id}:`, err);
+    }
+  }
+}

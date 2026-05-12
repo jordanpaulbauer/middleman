@@ -71,21 +71,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Pre-flight: both seller and closer must have Stripe accounts before we
-    // can split the payment. We don't require their `payouts_enabled` to be
-    // true at this stage; that's checked on the transfer side.
+    // Look up the parties' Connect accounts but don't require them. Funds
+    // land in the platform balance regardless; transfers fan out at
+    // finalize time and any party without Connect gets a pending_payout
+    // that flushes via the account.updated webhook once they onboard.
     const { data: parties } = await admin
       .from("profiles")
       .select("id, stripe_account_id, full_name")
       .in("id", [closing.seller_id, closing.closer_id]);
     const seller = parties?.find(p => p.id === closing.seller_id);
     const closer = parties?.find(p => p.id === closing.closer_id);
-    if (!seller?.stripe_account_id) {
-      return json({ error: "seller has not connected Stripe yet" }, 409);
-    }
-    if (!closer?.stripe_account_id) {
-      return json({ error: "closer has not connected Stripe yet" }, 409);
-    }
 
     // Compute splits in cents.
     const total = closing.agreed_price_cents as number;
@@ -105,8 +100,8 @@ Deno.serve(async (req) => {
         closing_id,
         seller_id: closing.seller_id,
         closer_id: closing.closer_id,
-        seller_account: seller.stripe_account_id,
-        closer_account: closer.stripe_account_id,
+        seller_account: seller?.stripe_account_id || "",
+        closer_account: closer?.stripe_account_id || "",
         platform_fee_cents: String(platformFee),
         closer_commission_cents: String(closerCommission),
         seller_net_cents: String(sellerNet),
