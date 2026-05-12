@@ -7,6 +7,7 @@ import { useLocation } from 'react-router-dom';
 import Seo from '../components/Seo';
 import PayModal from '../components/PayModal';
 import AsyncButton from '../components/AsyncButton';
+import { platformFeePctFor } from '../lib/fees';
 
 const STEPS = [
   { key: 'pending_payment', icon: '💳', label: 'Initiate' },
@@ -70,8 +71,11 @@ export default function ClosingsPage() {
   const price = parseInt(agreedPrice) || 0;
   const previewListing = showStartModal;
   const previewCommRate = previewListing?.commission || 10;
-  const previewComm = Math.round(price * previewCommRate / 100);
-  const previewPlatform = Math.round(price * 4 / 100);
+  // Platform fee slides with deal size — mirrors platform_fee_bps_for()
+  // in Postgres so the preview matches what the closing will record.
+  const previewPlatformPct = platformFeePctFor(price);
+  const previewComm = price * previewCommRate / 100;
+  const previewPlatform = price * previewPlatformPct / 100;
   const previewSeller = price - previewComm - previewPlatform;
 
   return (
@@ -333,8 +337,12 @@ export default function ClosingsPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 4 }}>
                     <span>Closer (you)</span><span style={{ color: 'var(--green)', fontWeight: 500 }}>{formatMoney(previewComm)}</span></div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: 'var(--text-muted)' }}>
-                    <span>Platform (4%)</span><span>{formatMoney(previewPlatform)}</span></div>
+                    <span title="Tiered platform fee — lower percentages on larger deals">
+                      Platform ({previewPlatformPct}%)
+                    </span>
+                    <span>{formatMoney(previewPlatform)}</span></div>
                   <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                    Platform fee slides with deal size — 4% under $1k, dropping to 1% on $100k+ deals.
                     Stripe also charges a processing fee (~2.9% + 30¢) deducted from the buyer's total before splits.
                   </div>
                 </div>
