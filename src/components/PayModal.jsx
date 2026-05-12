@@ -135,11 +135,18 @@ function CheckoutForm({ onSuccess, closingId }) {
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
+  const [paymentElementReady, setPaymentElementReady] = useState(false);
   const [err, setErr] = useState('');
+
+  // Stripe.js loads asynchronously; PaymentElement only fires onReady
+  // once it's actually mounted and ready to accept input. We gate the
+  // submit button on both so a click can't fire stripe.confirmPayment
+  // against an unmounted element ("elements should have a mounted
+  // Payment Element" error).
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!stripe || !elements) return;
+    if (!stripe || !elements || !paymentElementReady) return;
     setSubmitting(true);
     setErr('');
     try {
@@ -180,9 +187,26 @@ function CheckoutForm({ onSuccess, closingId }) {
     }
   };
 
+  const canSubmit = !!stripe && !!elements && paymentElementReady && !submitting;
+
   return (
     <form onSubmit={handleSubmit}>
-      <PaymentElement />
+      {/* Placeholder while Stripe.js + PaymentElement boot up. Stripe's
+          PaymentElement is invisible until it renders, so without this
+          the user sees a blank gap and might click Pay too early. */}
+      {!paymentElementReady && (
+        <div style={{
+          minHeight: 120, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'var(--bg-subtle)', borderRadius: 10,
+          fontSize: 14, color: 'var(--text-muted)', flexDirection: 'column', gap: 10,
+        }}>
+          <div className="spinner-dark" />
+          <span>Loading card form…</span>
+        </div>
+      )}
+      <div style={{ display: paymentElementReady ? 'block' : 'none' }}>
+        <PaymentElement onReady={() => setPaymentElementReady(true)} />
+      </div>
       {err && (
         <div style={{
           marginTop: 12, padding: '10px 14px',
@@ -190,14 +214,16 @@ function CheckoutForm({ onSuccess, closingId }) {
           borderRadius: 10, fontSize: 14,
         }}>{err}</div>
       )}
-      <button type="submit" disabled={!stripe || submitting} style={{
+      <button type="submit" disabled={!canSubmit} style={{
         width: '100%', marginTop: 14, padding: '14px 22px',
         background: 'var(--rausch)', color: 'white', border: 'none', borderRadius: 10,
         fontSize: 15, fontWeight: 500,
-        cursor: (!stripe || submitting) ? 'not-allowed' : 'pointer',
-        opacity: (!stripe || submitting) ? 0.6 : 1,
+        cursor: !canSubmit ? 'not-allowed' : 'pointer',
+        opacity: !canSubmit ? 0.6 : 1,
       }}>
-        {submitting ? 'Processing…' : 'Pay now'}
+        {submitting
+          ? 'Processing…'
+          : !paymentElementReady ? 'Loading payment form…' : 'Pay now'}
       </button>
     </form>
   );
