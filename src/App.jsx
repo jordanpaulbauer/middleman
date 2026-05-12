@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { Auth, Mode, Badges } from './services';
 import { subscribe } from './services';
 import BadgeEarnedModal from './components/BadgeEarnedModal';
+import OAuthCompletingOverlay from './components/OAuthCompletingOverlay';
 import { ToastProvider } from './hooks/useToast';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -118,9 +119,17 @@ export default function App() {
   // full-bleed, no chrome. Reachable both logged-in and logged-out.
   const isInterstitial =
     location.pathname.startsWith('/auth/') || location.pathname.startsWith('/pay/');
+
+  // OAuth callback overlay — covers the gap between landing back from
+  // Google and supabase-js finishing the session handshake. Rendered
+  // here (above every routing branch) so it shows regardless of which
+  // tree React mounts during that window.
+  const oauthOverlay = <OAuthCompletingOverlay done={!!user} />;
+
   if (isInterstitial) {
     return (
       <ToastProvider>
+        {oauthOverlay}
         <Routes>
           <Route path="/auth/reset" element={<AuthResetPage />} />
           <Route path="/auth/verify" element={<AuthVerifyPage />} />
@@ -137,6 +146,7 @@ export default function App() {
     if (!isPublicPath(location.pathname)) {
       return (
         <ToastProvider>
+          {oauthOverlay}
           <AuthGate>
             <AuthModal onAuth={handleAuth} />
           </AuthGate>
@@ -145,6 +155,7 @@ export default function App() {
     }
     return (
       <ToastProvider>
+        {oauthOverlay}
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
           <PublicHeader onSignIn={() => setShowAuthModal(true)} />
           <main style={{ flex: 1 }}>
@@ -160,6 +171,7 @@ export default function App() {
   // ── Logged-in flow ──
   return (
     <ToastProvider>
+      {oauthOverlay}
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Navbar onOpenChat={openChat} user={user} onOpenBadge={openBadgeCelebration} />
 
