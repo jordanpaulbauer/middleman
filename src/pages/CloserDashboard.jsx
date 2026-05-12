@@ -120,6 +120,21 @@ export default function CloserDashboard({ onOpenChat }) {
             const seller = getUserById(listing.seller_id);
             const payout = listing.price * listing.commission / 100;
             const canExtend = listing.status === 'claimed';
+            // Find any in-flight closing for this claim. If one exists,
+            // we swap the "Start Closing" CTA for a "Closing in Progress"
+            // affordance that jumps to the Closings page where the user
+            // can advance it.
+            const inFlightClosing = Closings.getAll().find(c =>
+              c.listing_id === listing.id &&
+              c.closer_id === user?.id &&
+              c.status !== 'completed' && c.status !== 'refunded'
+            );
+            const closingLabel = inFlightClosing && {
+              pending_payment: '⏳ Awaiting payment',
+              paid: '✅ Buyer paid — awaiting handoff',
+              item_confirmed: '🤝 Ready to release funds',
+              disputed: '⚠️ Disputed',
+            }[inFlightClosing.status] || 'Closing in progress';
             return (
               <div key={listing.id} className="card" style={{ padding: 20 }}>
                 <div style={{ display: 'flex', gap: 16 }}>
@@ -144,39 +159,52 @@ export default function CloserDashboard({ onOpenChat }) {
                       <CountdownProgress startDate={listing.claim_start} endDate={listing.claim_end} />
                     </div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
-                      {canExtend && (
+                      {canExtend && !inFlightClosing && (
                         <AsyncButton className="btn btn-secondary btn-sm" onClick={() => handleExtend(listing.id)}>
                           💬 Negotiate (+2d)
                         </AsyncButton>
                       )}
-                      <button className="btn btn-primary btn-sm" onClick={() => handleStartClosing(listing)}>
-                        💰 Start Closing
-                      </button>
+                      {inFlightClosing ? (
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => navigate('/closings')}
+                          title="Open the Closings page to advance this deal"
+                          style={{ background: 'var(--green)' }}
+                        >
+                          {closingLabel}
+                        </button>
+                      ) : (
+                        <button className="btn btn-primary btn-sm" onClick={() => handleStartClosing(listing)}>
+                          💰 Start Closing
+                        </button>
+                      )}
                       <AsyncButton className="btn btn-ghost btn-sm" onClick={() => handleMessage(listing)}>
                         <MessageCircle size={14} /> Message Seller
                       </AsyncButton>
-                      <AsyncButton
-                        className="btn btn-ghost btn-sm"
-                        title="Release this claim back to the marketplace"
-                        style={{ marginLeft: 'auto', color: 'var(--text-muted)' }}
-                        onClick={async () => {
-                          if (!window.confirm(`Release claim on "${listing.title}"? Other closers will be able to claim it.`)) return;
-                          try {
-                            await Listings.withdraw(listing.id);
-                            addToast({ type: 'success', title: 'Claim released', message: 'Listing is back on the marketplace.' });
-                            setTick(t => t + 1);
-                          } catch (err) {
-                            addToast({
-                              type: 'error',
-                              title: 'Could not release claim',
-                              message: err?.message || 'Try again in a moment.',
-                            });
-                            console.error('[CloserDashboard] withdraw failed:', err);
-                          }
-                        }}
-                      >
-                        Release claim
-                      </AsyncButton>
+                      {!inFlightClosing && (
+                        <AsyncButton
+                          className="btn btn-ghost btn-sm"
+                          title="Release this claim back to the marketplace"
+                          style={{ marginLeft: 'auto', color: 'var(--text-muted)' }}
+                          onClick={async () => {
+                            if (!window.confirm(`Release claim on "${listing.title}"? Other closers will be able to claim it.`)) return;
+                            try {
+                              await Listings.withdraw(listing.id);
+                              addToast({ type: 'success', title: 'Claim released', message: 'Listing is back on the marketplace.' });
+                              setTick(t => t + 1);
+                            } catch (err) {
+                              addToast({
+                                type: 'error',
+                                title: 'Could not release claim',
+                                message: err?.message || 'Try again in a moment.',
+                              });
+                              console.error('[CloserDashboard] withdraw failed:', err);
+                            }
+                          }}
+                        >
+                          Release claim
+                        </AsyncButton>
+                      )}
                     </div>
                   </div>
                 </div>
