@@ -16,7 +16,7 @@ import PostListing from './pages/PostListing';
 import ProfilePage from './pages/ProfilePage';
 import MessagesPage from './pages/MessagesPage';
 import AboutPage from './pages/AboutPage';
-import HelpPage from './pages/HelpPage';
+import FAQPage from './pages/FAQPage';
 import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
 import CookiesPage from './pages/CookiesPage';
@@ -33,7 +33,7 @@ import { setSentryUser } from './lib/sentry';
 // state and need to render their own dedicated page (no nav, no auth gate).
 // /pay/:closingId is the buyer checkout — buyers don't have accounts.
 const PUBLIC_PATHS = new Set([
-  '/about', '/help', '/terms', '/privacy', '/cookies',
+  '/about', '/faq', '/help', '/terms', '/privacy', '/cookies',
   '/auth/reset', '/auth/verify',
 ]);
 const PUBLIC_PREFIXES = ['/listing/', '/u/', '/pay/'];
@@ -182,7 +182,9 @@ export default function App() {
             <Route path="/messages" element={<MessagesPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/about" element={<AboutPage />} />
-            <Route path="/help" element={<HelpPage />} />
+            <Route path="/faq" element={<FAQPage />} />
+            {/* Backwards compat: existing /help links keep working. */}
+            <Route path="/help" element={<Navigate to="/faq" replace />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/cookies" element={<CookiesPage />} />
@@ -212,7 +214,8 @@ function PublicRoutes({ onRequireAuth }) {
   return (
     <Routes>
       <Route path="/about" element={<AboutPage />} />
-      <Route path="/help" element={<HelpPage />} />
+      <Route path="/faq" element={<FAQPage />} />
+      <Route path="/help" element={<Navigate to="/faq" replace />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/cookies" element={<CookiesPage />} />

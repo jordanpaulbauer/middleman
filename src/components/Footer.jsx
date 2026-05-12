@@ -22,7 +22,7 @@ export default function Footer() {
 
   const company = [
     { label: 'About', onClick: () => navigate('/about') },
-    { label: 'Help', onClick: () => navigate('/help') },
+    { label: 'FAQ', onClick: () => navigate('/faq') },
   ];
 
   const legal = [
