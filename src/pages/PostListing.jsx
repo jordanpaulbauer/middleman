@@ -1,8 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
-import { Listings, Auth } from '../services';
-import { supabase } from '../lib/supabase';
+import { Listings } from '../services';
 import { CATEGORIES, CONDITIONS, formatMoney } from '../data/demo';
 import { useToast } from '../hooks/useToast';
 import Seo from '../components/Seo';
@@ -33,41 +32,37 @@ export default function PostListing() {
       addToast({ type: 'error', title: 'Max 10 photos' });
       return;
     }
-    const user = Auth.getUser();
-    if (!user?.id) {
-      addToast({ type: 'error', title: 'Sign in to upload photos' });
-      return;
-    }
     setCompressing(true);
     try {
-      const processed = await Promise.all(valid.map(f => compressAndUpload(f, user.id)));
+      const processed = await Promise.all(valid.map(compressImage));
       setPhotos(prev => [...prev, ...processed]);
     } catch (err) {
       addToast({
         type: 'error',
-        title: 'Could not upload photos',
-        message: err?.message || 'Try again with fewer or smaller images.',
+        title: 'Could not process photos',
+        message: err?.message || 'Try again with different images.',
       });
-      console.error('[PostListing] upload failed:', err);
+      console.error('[PostListing] compress failed:', err);
     } finally {
       setCompressing(false);
     }
   };
 
-  // Compress in-browser to a JPEG blob, then upload to the listing-photos
-  // bucket. Public URL is what we store in listings.photos — never the
-  // raw bytes (those would blow past PostgREST's request size limit).
-  const compressAndUpload = (file, userId) => {
+  // Compress in-browser and inline as a base64 data URL. Keeps the flow
+  // entirely client-side — no Storage roundtrip — so it works even when
+  // the user's network blocks the storage subdomain. Trade-off: row size
+  // grows with photo count, so we keep the dimension cap modest.
+  const compressImage = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onerror = () => reject(new Error('Could not read file'));
       reader.onload = (e) => {
         const img = new Image();
         img.onerror = () => reject(new Error('Could not decode image'));
-        img.onload = async () => {
+        img.onload = () => {
           const canvas = document.createElement('canvas');
           let w = img.width, h = img.height;
-          const max = 1600;
+          const max = 1200;
           if (w > max || h > max) {
             if (w > h) { h = Math.round(h * max / w); w = max; }
             else { w = Math.round(w * max / h); h = max; }
@@ -75,35 +70,9 @@ export default function PostListing() {
           canvas.width = w;
           canvas.height = h;
           canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          canvas.toBlob(async (blob) => {
-            if (!blob) return reject(new Error('Could not compress image'));
-            const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
-            try {
-              // Race the Supabase upload against a hard 20s timeout. Without
-              // this, a wedged storage client or flaky network leaves the
-              // user staring at "Uploading photos…" forever with no recourse.
-              const uploadResult = await Promise.race([
-                supabase.storage
-                  .from('listing-photos')
-                  .upload(path, blob, { contentType: 'image/jpeg', upsert: false }),
-                new Promise((_, rej) => setTimeout(
-                  () => rej(new Error('Upload timed out after 20s — check your connection and retry')),
-                  20000
-                )),
-              ]);
-              const { error: upErr } = uploadResult;
-              if (upErr) return reject(new Error(upErr.message));
-              const { data: pub } = supabase.storage.from('listing-photos').getPublicUrl(path);
-              resolve({
-                url: pub.publicUrl,
-                path,
-                name: file.name,
-                size: Math.round(blob.size / 1024),
-              });
-            } catch (err) {
-              reject(err);
-            }
-          }, 'image/jpeg', 0.8);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+          const size = Math.round((dataUrl.length * 3) / 4 / 1024);
+          resolve({ url: dataUrl, name: file.name, size });
         };
         img.src = e.target.result;
       };
@@ -111,16 +80,7 @@ export default function PostListing() {
     });
   };
 
-  const removePhoto = async (idx) => {
-    const photo = photos[idx];
-    setPhotos(prev => prev.filter((_, i) => i !== idx));
-    // Best-effort delete from Storage so abandoned files don't linger.
-    // If it fails we don't roll back — the row was never committed anyway.
-    if (photo?.path) {
-      try { await supabase.storage.from('listing-photos').remove([photo.path]); }
-      catch (err) { console.warn('[PostListing] storage cleanup failed:', err); }
-    }
-  };
+  const removePhoto = (idx) => setPhotos(prev => prev.filter((_, i) => i !== idx));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -237,7 +197,7 @@ export default function PostListing() {
             {compressing ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                 <div className="spinner-dark" />
-                <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>Uploading photos…</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>Optimizing photos…</span>
               </div>
             ) : (
               <>
