@@ -340,6 +340,16 @@ tbody tr:last-child td { border-bottom: none; }
   width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3);
   border-top-color: white; border-radius: 50%; animation: spin 600ms linear infinite;
 }
+.spinner-sm {
+  width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: currentColor; border-radius: 50%; animation: spin 600ms linear infinite;
+  display: inline-block; flex-shrink: 0;
+}
+.spinner-dark {
+  width: 14px; height: 14px; border: 2px solid rgba(0,0,0,0.15);
+  border-top-color: var(--text); border-radius: 50%; animation: spin 600ms linear infinite;
+  display: inline-block; flex-shrink: 0;
+}
 
 /* ═══ Responsive (Airbnb breakpoints) ═══ */
 @media (max-width: 1128px) { .stat-cards { grid-template-columns: repeat(2, 1fr); } .grid-3 { grid-template-columns: repeat(2, 1fr); } }

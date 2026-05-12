@@ -4,6 +4,7 @@ import { Listings, Watchlist, Chat, Auth, Admin } from '../services';
 import { getUserById, formatMoney, getCountdownColor } from '../data/demo';
 import CountdownTimer from './CountdownTimer';
 import AdminRemoveListingModal from './AdminRemoveListingModal';
+import AsyncButton from './AsyncButton';
 import { useToast } from '../hooks/useToast';
 
 export default function ListingDetailModal({ listing, onClose, onOpenChat, onRefresh }) {
@@ -184,9 +185,9 @@ export default function ListingDetailModal({ listing, onClose, onOpenChat, onRef
           {/* Actions */}
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             {isAvailable && !isMyListing && (
-              <button className="btn btn-primary btn-lg" onClick={handleClaim} style={{ flex: 1 }}>
+              <AsyncButton className="btn btn-primary btn-lg" onClick={handleClaim} style={{ flex: 1 }}>
                 <Zap size={18} /> Claim This Listing
-              </button>
+              </AsyncButton>
             )}
             {isAvailable && isMyListing && (
               <div style={{ flex: 1, textAlign: 'center', padding: 14, color: 'var(--text-muted)', fontSize: 14 }}>

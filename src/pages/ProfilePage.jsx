@@ -4,6 +4,7 @@ import { Auth, Profile, Reviews, Closings, Listings, Stripe } from '../services'
 import { formatMoney, formatDate, CATEGORIES } from '../data/demo';
 import { useToast } from '../hooks/useToast';
 import Seo from '../components/Seo';
+import AsyncButton from '../components/AsyncButton';
 
 const BADGES = [
   { key: 'verified', icon: '🛡️', label: 'Verified' },
@@ -303,7 +304,7 @@ function SettingsModal({ user, onClose, onSave }) {
                         : 'Required before any deal can pay out commission.'}
                   </div>
                 </div>
-                <button
+                <AsyncButton
                   className="btn btn-secondary btn-sm"
                   onClick={async () => {
                     try {
@@ -315,7 +316,7 @@ function SettingsModal({ user, onClose, onSave }) {
                   }}
                 >
                   <ExternalLink size={14} /> {stripeStatus.connected ? 'Continue onboarding' : 'Connect Stripe'}
-                </button>
+                </AsyncButton>
               </div>
             </Section>
 
@@ -339,7 +340,7 @@ function SettingsModal({ user, onClose, onSave }) {
                   Permanently removes your profile, listings, messages, and watchlist.
                   Past completed deals stay in the audit log. This cannot be undone.
                 </div>
-                <button
+                <AsyncButton
                   className="btn btn-secondary btn-sm"
                   style={{ borderColor: 'var(--red)', color: 'var(--red)' }}
                   onClick={async () => {
@@ -357,14 +358,14 @@ function SettingsModal({ user, onClose, onSave }) {
                   }}
                 >
                   Delete my account
-                </button>
+                </AsyncButton>
               </div>
             </Section>
           </div>
         </div>
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave}>Save Changes</button>
+          <AsyncButton className="btn btn-primary" onClick={handleSave}>Save Changes</AsyncButton>
         </div>
       </div>
     </div>

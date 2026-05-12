@@ -6,6 +6,7 @@ import { useToast } from '../hooks/useToast';
 import { useLocation } from 'react-router-dom';
 import Seo from '../components/Seo';
 import PayModal from '../components/PayModal';
+import AsyncButton from '../components/AsyncButton';
 
 const STEPS = [
   { key: 'pending_payment', icon: '💳', label: 'Initiate' },
@@ -220,7 +221,7 @@ export default function ClosingsPage() {
                         </>
                       )}
                       {c.status === 'paid' && isSeller && (
-                        <button className="btn btn-primary btn-sm" onClick={async () => {
+                        <AsyncButton className="btn btn-primary btn-sm" onClick={async () => {
                           try {
                             await Closings.confirmHandoff(c.id);
                             addToast({ type: 'success', title: 'Handoff Confirmed' });
@@ -230,10 +231,10 @@ export default function ClosingsPage() {
                           }
                         }}>
                           <Handshake size={14} /> Confirm Item Handed Off
-                        </button>
+                        </AsyncButton>
                       )}
                       {c.status === 'item_confirmed' && (
-                        <button className="btn btn-primary btn-sm" onClick={async () => {
+                        <AsyncButton className="btn btn-primary btn-sm" onClick={async () => {
                           try {
                             await Closings.complete(c.id);
                             addToast({ type: 'success', title: 'Deal Complete!', message: 'Funds released to all parties.' });
@@ -243,7 +244,7 @@ export default function ClosingsPage() {
                           }
                         }}>
                           <DollarSign size={14} /> Release Funds & Complete
-                        </button>
+                        </AsyncButton>
                       )}
                       {c.status === 'completed' && (
                         <span className="badge badge-green"><CheckCircle size={12} /> Completed {formatDate(c.completed_at)}</span>
@@ -255,7 +256,7 @@ export default function ClosingsPage() {
                       )}
                       {/* Either party can flag a problem on an in-flight closing */}
                       {(c.status === 'paid' || c.status === 'item_confirmed') && (
-                        <button
+                        <AsyncButton
                           className="btn btn-ghost btn-sm"
                           style={{ color: 'var(--red)', marginLeft: 'auto' }}
                           onClick={async () => {
@@ -271,7 +272,7 @@ export default function ClosingsPage() {
                           }}
                         >
                           <AlertTriangle size={14} /> Report problem
-                        </button>
+                        </AsyncButton>
                       )}
                     </div>
                   </div>

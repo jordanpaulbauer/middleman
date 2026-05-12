@@ -6,6 +6,7 @@ import { getUserById, formatMoney, formatDate, formatTimeAgo } from '../data/dem
 import CountdownTimer, { CountdownProgress } from '../components/CountdownTimer';
 import Seo from '../components/Seo';
 import EditListingModal from '../components/EditListingModal';
+import AsyncButton from '../components/AsyncButton';
 import { useToast } from '../hooks/useToast';
 
 export default function SellerDashboard({ onOpenChat }) {
@@ -115,7 +116,7 @@ export default function SellerDashboard({ onOpenChat }) {
                               onClick={() => setEditingListing(l)}
                               style={{ padding: 6 }}
                             ><Edit3 size={14} /></button>
-                            <button
+                            <AsyncButton
                               className="btn btn-ghost btn-sm"
                               title="Delete listing"
                               onClick={async () => {
@@ -129,7 +130,7 @@ export default function SellerDashboard({ onOpenChat }) {
                                 }
                               }}
                               style={{ padding: 6, color: 'var(--red)' }}
-                            ><Trash2 size={14} /></button>
+                            ><Trash2 size={14} /></AsyncButton>
                           </>
                         )}
                         <span className={`badge ${l.status === 'open' ? 'badge-green' : l.status === 'sold' ? 'badge-grey' : 'badge-orange'}`}>
@@ -260,7 +261,7 @@ export default function SellerDashboard({ onOpenChat }) {
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setShowReviewModal(null)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleReview} disabled={!reviewText.trim()}>Submit Review</button>
+              <AsyncButton className="btn btn-primary" onClick={handleReview} disabled={!reviewText.trim()}>Submit Review</AsyncButton>
             </div>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { Listings, Watchlist, Closings, Auth, Chat, Reviews } from '../services'
 import { getUserById, formatMoney, formatDate } from '../data/demo';
 import CountdownTimer, { CountdownProgress } from '../components/CountdownTimer';
 import Seo from '../components/Seo';
+import AsyncButton from '../components/AsyncButton';
 
 export default function CloserDashboard({ onOpenChat }) {
   const navigate = useNavigate();
@@ -137,17 +138,17 @@ export default function CloserDashboard({ onOpenChat }) {
                     </div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
                       {canExtend && (
-                        <button className="btn btn-secondary btn-sm" onClick={() => handleExtend(listing.id)}>
+                        <AsyncButton className="btn btn-secondary btn-sm" onClick={() => handleExtend(listing.id)}>
                           💬 Negotiate (+2d)
-                        </button>
+                        </AsyncButton>
                       )}
                       <button className="btn btn-primary btn-sm" onClick={() => handleStartClosing(listing)}>
                         💰 Start Closing
                       </button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => handleMessage(listing)}>
+                      <AsyncButton className="btn btn-ghost btn-sm" onClick={() => handleMessage(listing)}>
                         <MessageCircle size={14} /> Message Seller
-                      </button>
-                      <button
+                      </AsyncButton>
+                      <AsyncButton
                         className="btn btn-ghost btn-sm"
                         title="Release this claim back to the marketplace"
                         style={{ marginLeft: 'auto', color: 'var(--text-muted)' }}
@@ -162,7 +163,7 @@ export default function CloserDashboard({ onOpenChat }) {
                         }}
                       >
                         Release claim
-                      </button>
+                      </AsyncButton>
                     </div>
                   </div>
                 </div>
@@ -200,15 +201,15 @@ export default function CloserDashboard({ onOpenChat }) {
                 </span>
                 <div style={{ marginTop: 12 }}>
                   {isAvailable ? (
-                    <button className="btn btn-primary btn-sm" style={{ width: '100%' }}
+                    <AsyncButton className="btn btn-primary btn-sm" style={{ width: '100%' }}
                       onClick={async () => { await Listings.claim(l.id); setTick(t => t + 1); }}>
                       <Zap size={14} /> Claim Now — {l.commission}%
-                    </button>
+                    </AsyncButton>
                   ) : l.status !== 'sold' && (
-                    <button className={`btn btn-sm ${w.notify ? 'btn-primary' : 'btn-secondary'}`} style={{ width: '100%' }}
-                      onClick={() => { Watchlist.setNotify(l.id, !w.notify); setTick(t => t + 1); }}>
+                    <AsyncButton className={`btn btn-sm ${w.notify ? 'btn-primary' : 'btn-secondary'}`} style={{ width: '100%' }}
+                      onClick={async () => { await Watchlist.setNotify(l.id, !w.notify); setTick(t => t + 1); }}>
                       <Bell size={14} fill={w.notify ? 'currentColor' : 'none'} /> {w.notify ? 'Notifications On' : 'Notify Me'}
-                    </button>
+                    </AsyncButton>
                   )}
                 </div>
               </div>
@@ -297,7 +298,7 @@ export default function CloserDashboard({ onOpenChat }) {
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setShowReviewModal(null)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleReview} disabled={!reviewText.trim()}>Submit Review</button>
+              <AsyncButton className="btn btn-primary" onClick={handleReview} disabled={!reviewText.trim()}>Submit Review</AsyncButton>
             </div>
           </div>
         </div>
