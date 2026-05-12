@@ -73,15 +73,25 @@ export default function PostListing() {
       return;
     }
     setSubmitting(true);
-    await Listings.create({
-      title: form.title, category: form.category, condition: form.condition,
-      location: form.location, description: form.description,
-      price: parseInt(form.price), commission: parseInt(form.commission),
-      photos: photos.length > 0 ? photos.map(p => p.url) : ['https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=600&h=450&fit=crop'],
-    });
-    addToast({ type: 'success', title: 'Listing Posted!', message: 'Your listing is now live.' });
-    setSubmitting(false);
-    navigate('/seller');
+    try {
+      await Listings.create({
+        title: form.title, category: form.category, condition: form.condition,
+        location: form.location, description: form.description,
+        price: parseInt(form.price), commission: parseInt(form.commission),
+        photos: photos.length > 0 ? photos.map(p => p.url) : ['https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=600&h=450&fit=crop'],
+      });
+      addToast({ type: 'success', title: 'Listing Posted!', message: 'Your listing is now live.' });
+      navigate('/seller');
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Could not post listing',
+        message: err?.message || 'Unknown error — check console for details',
+      });
+      console.error('[PostListing] create failed:', err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
