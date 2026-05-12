@@ -794,25 +794,29 @@ export const Closings = {
 
   create: async ({ listingId, buyerName, buyerEmail, agreedPrice }) => {
     if (isSupabaseEnabled) {
-      const { data: row, error } = await supabase.rpc('create_closing', {
-        p_listing_id: listingId,
-        p_buyer_name: buyerName,
-        p_buyer_email: buyerEmail,
-        p_agreed_price_cents: dollarsToCents(agreedPrice),
-      });
+      // 15s timeout so a wedged client surfaces an error instead of
+      // trapping the user on "Generating…" forever.
+      const { data: row, error } = await withTimeout(
+        supabase.rpc('create_closing', {
+          p_listing_id: listingId,
+          p_buyer_name: buyerName,
+          p_buyer_email: buyerEmail,
+          p_agreed_price_cents: dollarsToCents(agreedPrice),
+        }),
+        15000,
+        'create_closing'
+      );
       if (error) throw new Error(error.message);
       const ui = dbClosingToUi(Array.isArray(row) ? row[0] : row);
       ui.stripe_checkout_url = `${window.location.origin}/pay/${ui.id}`;
       closings = [ui, ...closings];
       notify();
-      // Best-effort PaymentIntent mint. If both parties haven't connected
-      // Stripe yet, this fails — the closing still exists, the closer just
-      // needs to ensure both sides have onboarded before sharing the link.
-      try {
-        await callEdgeFunction('stripe-create-payment-intent', { closing_id: ui.id });
-      } catch (err) {
-        console.warn('[Closings] PaymentIntent mint deferred:', err.message);
-      }
+      // Fire-and-forget the PaymentIntent mint so a slow or failing edge
+      // function can't block the closing-create return. The closing row
+      // exists at this point; minting can happen lazily when the buyer
+      // hits the pay page if it hasn't completed yet.
+      callEdgeFunction('stripe-create-payment-intent', { closing_id: ui.id })
+        .catch(err => console.warn('[Closings] PaymentIntent mint deferred:', err.message));
       return ui;
     }
     const listing = Listings.getById(listingId);
