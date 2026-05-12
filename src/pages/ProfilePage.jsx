@@ -284,10 +284,22 @@ function SettingsModal({ user, onClose, onSave }) {
   const [location, setLocation] = useState(user?.location || '');
 
   const handleSave = async () => {
-    await Profile.update({ full_name: name, email, phone, location });
-    addToast({ type: 'success', title: 'Settings Saved' });
-    onSave();
-    onClose();
+    try {
+      // Email is owned by auth.users — changing it requires a Supabase Auth
+      // flow (verification email + re-login). For now we only persist the
+      // editable profile fields and leave the email column in sync via auth.
+      await Profile.update({ full_name: name, phone, location });
+      addToast({ type: 'success', title: 'Settings Saved' });
+      onSave();
+      onClose();
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Could not save settings',
+        message: err?.message || 'Try again in a moment.',
+      });
+      console.error('[SettingsModal] save failed:', err);
+    }
   };
 
   const stripeStatus = Stripe.getAccountStatus();
@@ -304,8 +316,17 @@ function SettingsModal({ user, onClose, onSave }) {
             <Section title="Basic Info" status={name && email ? 'complete' : 'pending'}>
               <div className="input-group"><label className="input-label">Full Name</label>
                 <input className="input" value={name} onChange={e => setName(e.target.value)} /></div>
-              <div className="input-group"><label className="input-label">Email</label>
-                <input className="input" type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
+              <div className="input-group">
+                <label className="input-label">Email</label>
+                <input
+                  className="input"
+                  type="email"
+                  value={email}
+                  readOnly
+                  style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', cursor: 'not-allowed' }}
+                />
+                <div className="input-hint">Email is tied to your login and can't be changed here.</div>
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div className="input-group"><label className="input-label">Phone</label>
                   <input className="input" value={phone} onChange={e => setPhone(e.target.value)} /></div>
