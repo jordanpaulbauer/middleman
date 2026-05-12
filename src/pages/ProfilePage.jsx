@@ -66,10 +66,19 @@ export default function ProfilePage() {
   };
 
   const saveBio = async () => {
-    await Profile.update({ bio });
-    setEditingBio(false);
-    addToast({ type: 'success', title: 'Bio Saved' });
-    setTick(t => t + 1);
+    try {
+      await Profile.update({ bio });
+      addToast({ type: 'success', title: 'Bio Saved' });
+      setEditingBio(false);
+      setTick(t => t + 1);
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Could not save bio',
+        message: err?.message || 'Try again in a moment.',
+      });
+      console.error('[ProfilePage] saveBio failed:', err);
+    }
   };
 
   // Category breakdown for specialties
@@ -121,7 +130,7 @@ export default function ProfilePage() {
                 <textarea className="textarea" value={bio} onChange={e => setBio(e.target.value.slice(0, 280))}
                   style={{ minHeight: 60, flex: 1 }} placeholder="Write your bio..." />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <button className="btn btn-primary btn-sm" onClick={saveBio}><Check size={14} /></button>
+                  <AsyncButton className="btn btn-primary btn-sm" onClick={saveBio}><Check size={14} /></AsyncButton>
                   <button className="btn btn-ghost btn-sm" onClick={() => setEditingBio(false)}><X size={14} /></button>
                 </div>
               </div>
