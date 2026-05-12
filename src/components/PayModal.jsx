@@ -136,13 +136,25 @@ function CheckoutForm({ onSuccess, closingId }) {
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
   const [paymentElementReady, setPaymentElementReady] = useState(false);
+  const [paymentElementBlocked, setPaymentElementBlocked] = useState(false);
   const [err, setErr] = useState('');
 
   // Stripe.js loads asynchronously; PaymentElement only fires onReady
   // once it's actually mounted and ready to accept input. We gate the
   // submit button on both so a click can't fire stripe.confirmPayment
-  // against an unmounted element ("elements should have a mounted
-  // Payment Element" error).
+  // against an unmounted element.
+  //
+  // If onReady doesn't fire within 12s, something is blocking the
+  // Stripe iframe — usually an ad blocker, privacy extension, or
+  // strict network filter blocking js.stripe.com / m.stripe.network.
+  // Flag it so we can show an actionable error.
+  useEffect(() => {
+    if (paymentElementReady) return;
+    const t = setTimeout(() => {
+      if (!paymentElementReady) setPaymentElementBlocked(true);
+    }, 12000);
+    return () => clearTimeout(t);
+  }, [paymentElementReady]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -194,7 +206,7 @@ function CheckoutForm({ onSuccess, closingId }) {
       {/* Placeholder while Stripe.js + PaymentElement boot up. Stripe's
           PaymentElement is invisible until it renders, so without this
           the user sees a blank gap and might click Pay too early. */}
-      {!paymentElementReady && (
+      {!paymentElementReady && !paymentElementBlocked && (
         <div style={{
           minHeight: 120, display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'var(--bg-subtle)', borderRadius: 10,
@@ -202,6 +214,23 @@ function CheckoutForm({ onSuccess, closingId }) {
         }}>
           <div className="spinner-dark" />
           <span>Loading card form…</span>
+        </div>
+      )}
+      {paymentElementBlocked && (
+        <div style={{
+          padding: '14px 16px', background: 'var(--red-light)', color: 'var(--red)',
+          borderRadius: 10, fontSize: 14, lineHeight: 1.5,
+        }}>
+          <div style={{ fontWeight: 500, marginBottom: 6 }}>The card form couldn't load.</div>
+          <div style={{ color: 'var(--text-secondary)' }}>
+            This usually means a browser extension (ad blocker, privacy plugin) or your network is blocking Stripe.
+            Try one of:
+          </div>
+          <ul style={{ margin: '8px 0 0', paddingLeft: 18, color: 'var(--text-secondary)' }}>
+            <li>Open this page in an incognito / private window</li>
+            <li>Disable ad blockers and privacy extensions on this site, then reload</li>
+            <li>Try a different browser or device</li>
+          </ul>
         </div>
       )}
       <div style={{ display: paymentElementReady ? 'block' : 'none' }}>
@@ -214,17 +243,19 @@ function CheckoutForm({ onSuccess, closingId }) {
           borderRadius: 10, fontSize: 14,
         }}>{err}</div>
       )}
-      <button type="submit" disabled={!canSubmit} style={{
-        width: '100%', marginTop: 14, padding: '14px 22px',
-        background: 'var(--rausch)', color: 'white', border: 'none', borderRadius: 10,
-        fontSize: 15, fontWeight: 500,
-        cursor: !canSubmit ? 'not-allowed' : 'pointer',
-        opacity: !canSubmit ? 0.6 : 1,
-      }}>
-        {submitting
-          ? 'Processing…'
-          : !paymentElementReady ? 'Loading payment form…' : 'Pay now'}
-      </button>
+      {!paymentElementBlocked && (
+        <button type="submit" disabled={!canSubmit} style={{
+          width: '100%', marginTop: 14, padding: '14px 22px',
+          background: 'var(--rausch)', color: 'white', border: 'none', borderRadius: 10,
+          fontSize: 15, fontWeight: 500,
+          cursor: !canSubmit ? 'not-allowed' : 'pointer',
+          opacity: !canSubmit ? 0.6 : 1,
+        }}>
+          {submitting
+            ? 'Processing…'
+            : !paymentElementReady ? 'Loading payment form…' : 'Pay now'}
+        </button>
+      )}
     </form>
   );
 }
