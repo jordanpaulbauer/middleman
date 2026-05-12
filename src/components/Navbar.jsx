@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { MessageCircle, Bell, User, LogOut, Settings, ChevronDown, Menu, Repeat } from 'lucide-react';
+import { MessageCircle, Bell, User, LogOut, Settings, ChevronDown, Menu, Repeat, RotateCw } from 'lucide-react';
 import { Auth, Mode, Chat, Notifications } from '../services';
 import NotificationDropdown from './NotificationDropdown';
 import { useIsNarrow } from '../hooks/useMediaQuery';
@@ -198,6 +198,13 @@ export default function Navbar({ onOpenChat, user, onOpenBadge }) {
                 </div>
                 <div style={{ height: 1, background: 'var(--border-light)', margin: '4px 0' }} />
                 <div style={{ padding: '2px 0' }}>
+                  <MenuButton icon={<RotateCw size={16} />} label="Reset session"
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      if (window.confirm('This will clear your local session and reload — useful if buttons are stuck or things stop responding. Continue?')) {
+                        Auth.resetSession();
+                      }
+                    }} />
                   <MenuButton icon={<LogOut size={16} />} label="Log out"
                     onClick={() => {
                       // Fire-and-forget: Auth.logout clears local state

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { X, Lock } from 'lucide-react';
 import { stripePromise, isStripeEnabled } from '../lib/stripe';
-import { Stripe as StripeService } from '../services';
+import { Stripe as StripeService, Auth } from '../services';
 
 // In-app payment modal. Opens directly in the closer's flow so they (or a
 // guest buyer) can complete payment without leaving the page. Same code path
@@ -93,7 +93,28 @@ export default function PayModal({ closing, onClose, onSuccess }) {
             <div style={{
               padding: '12px 14px', background: 'var(--red-light)', color: 'var(--red)',
               borderRadius: 10, fontSize: 14,
-            }}>{error}</div>
+            }}>
+              <div>{error}</div>
+              {/* If the failure looks like a client-side timeout, surface the
+                  one-click recovery so the user doesn't have to dig through
+                  DevTools to unstick supabase-js. */}
+              {/timed out/i.test(error) && (
+                <div style={{ marginTop: 8, fontSize: 13, color: 'var(--text-muted)' }}>
+                  Looks like your session is stuck.{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm('This will clear your local session and reload. Continue?')) {
+                        Auth.resetSession();
+                      }
+                    }}
+                    style={{ background: 'none', border: 'none', color: 'var(--text)', textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}
+                  >
+                    Reset session
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           {!loading && !error && clientSecret && (
