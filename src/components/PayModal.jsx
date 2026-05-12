@@ -104,12 +104,6 @@ export default function PayModal({ closing, onClose, onSuccess }) {
               <CheckoutForm onSuccess={onSuccess} closingId={closing.id} />
             </Elements>
           )}
-
-          <div style={{
-            textAlign: 'center', fontSize: 12, color: 'var(--text-light)', marginTop: 14,
-          }}>
-            Test mode — use card 4242 4242 4242 4242, any future date, any CVC.
-          </div>
         </div>
       </div>
     </div>
