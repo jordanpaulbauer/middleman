@@ -27,7 +27,7 @@ export default function ListingPage({ onRequireAuth }) {
   if (!listing) return <NotFoundPage />;
 
   const seller = Profile.get(listing.seller_id);
-  const payout = Math.round((listing.price || 0) * (listing.commission || 0) / 100);
+  const payout = (listing.price || 0) * (listing.commission || 0) / 100;
   const photo = listing.photos?.[0];
   const status = STATUS_STYLES[listing.status] || STATUS_STYLES.open;
   const isWatched = user ? Watchlist.isInWatchlist(listing.id) : false;

@@ -45,8 +45,8 @@ export default function CloserDashboard({ onOpenChat }) {
   const watchlistItems = Watchlist.get();
   const completedClosings = Closings.getAll().filter(c => c.closer_id === user?.id && c.status === 'completed');
 
-  const totalEarned = completedClosings.reduce((sum, c) => sum + Math.round(c.agreed_price * c.commission_rate / 100), 0);
-  const pipelineValue = activeClaims.reduce((sum, l) => sum + Math.round(l.price * l.commission / 100), 0);
+  const totalEarned = completedClosings.reduce((sum, c) => sum + c.agreed_price * c.commission_rate / 100, 0);
+  const pipelineValue = activeClaims.reduce((sum, l) => sum + l.price * l.commission / 100, 0);
   const totalAttempts = allListings.filter(l => l.claimed_by === user?.id).length;
   const closeRate = totalAttempts > 0 ? Math.round((completedClosings.length / totalAttempts) * 100) : 0;
 
@@ -118,7 +118,7 @@ export default function CloserDashboard({ onOpenChat }) {
             </div>
           ) : activeClaims.map(listing => {
             const seller = getUserById(listing.seller_id);
-            const payout = Math.round(listing.price * listing.commission / 100);
+            const payout = listing.price * listing.commission / 100;
             const canExtend = listing.status === 'claimed';
             return (
               <div key={listing.id} className="card" style={{ padding: 20 }}>
@@ -243,7 +243,7 @@ export default function CloserDashboard({ onOpenChat }) {
                   <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>No earnings yet</td></tr>
                 ) : completedClosings.map(c => {
                   const listing = Listings.getById(c.listing_id);
-                  const payout = Math.round(c.agreed_price * c.commission_rate / 100);
+                  const payout = c.agreed_price * c.commission_rate / 100;
                   const myReview = Reviews.getMyReviewForClosing(c.id);
                   const withinWindow = c.completed_at &&
                     Date.now() - new Date(c.completed_at).getTime() < Reviews.REVIEW_WINDOW_DAYS * 86400000;

@@ -19,7 +19,7 @@ export default function PublicProfilePage() {
     (c) => c.closer_id === profile.id && c.status === 'completed'
   );
   const totalEarned = completedAsCloser.reduce(
-    (sum, c) => sum + Math.round((c.agreed_price || 0) * (c.commission_rate || 0) / 100),
+    (sum, c) => sum + (c.agreed_price || 0) * (c.commission_rate || 0) / 100,
     0
   );
   const sellerListings = Listings.getAll().filter((l) => l.seller_id === profile.id);

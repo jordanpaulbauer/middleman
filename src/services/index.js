@@ -41,7 +41,10 @@ export function subscribe(fn) { listeners.add(fn); return () => listeners.delete
 // Postgres stores cents/basis-points; the UI uses dollars/percent.
 const bpsToPct = (bps) => Math.round((bps || 0) / 100);
 const pctToBps = (pct) => Math.round((pct || 0) * 100);
-const centsToDollars = (cents) => Math.round((cents || 0) / 100);
+// Preserve cents — the UI formats with two decimals so the user sees
+// the exact mathematical split (e.g., $0.20 closer commission on $2),
+// not a misleading rounded-to-zero.
+const centsToDollars = (cents) => (cents || 0) / 100;
 const dollarsToCents = (dollars) => Math.round((dollars || 0) * 100);
 
 function dbListingToUi(row) {

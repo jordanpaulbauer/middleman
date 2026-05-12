@@ -188,7 +188,7 @@ export default function BrowsePage({ onOpenChat }) {
 
 function ListingCard({ listing, onClick, onToggleWatchlist, isAdmin, onAdminRemove }) {
   const seller = getUserById(listing.seller_id);
-  const payout = Math.round(listing.price * listing.commission / 100);
+  const payout = listing.price * listing.commission / 100;
   const isClaimed = listing.status === 'claimed' || listing.status === 'negotiating';
   const isSold = listing.status === 'sold';
   const inWatchlist = Watchlist.isInWatchlist(listing.id);

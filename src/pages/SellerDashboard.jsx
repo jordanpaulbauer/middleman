@@ -26,8 +26,8 @@ export default function SellerDashboard({ onOpenChat }) {
   const activeClosers = new Set(myListings.filter(l => l.claimed_by).map(l => l.claimed_by)).size;
 
   const totalRevenue = completedSales.reduce((sum, c) => {
-    const platformFee = Math.round(c.agreed_price * c.platform_fee_pct / 100);
-    const commission = Math.round(c.agreed_price * c.commission_rate / 100);
+    const platformFee = c.agreed_price * c.platform_fee_pct / 100;
+    const commission = c.agreed_price * c.commission_rate / 100;
     return sum + c.agreed_price - platformFee - commission;
   }, 0);
 
@@ -99,7 +99,7 @@ export default function SellerDashboard({ onOpenChat }) {
           ) : myListings.map(l => {
             const closer = l.claimed_by ? Profile.get(l.claimed_by) : null;
             const isClaimed = l.status === 'claimed' || l.status === 'negotiating';
-            const commCost = Math.round(l.price * l.commission / 100);
+            const commCost = l.price * l.commission / 100;
             return (
               <div key={l.id} className="card" style={{ padding: 20 }}>
                 <div style={{ display: 'flex', gap: 16 }}>
@@ -199,8 +199,8 @@ export default function SellerDashboard({ onOpenChat }) {
                   <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>No sales yet</td></tr>
                 ) : completedSales.map(c => {
                   const listing = Listings.getById(c.listing_id);
-                  const commission = Math.round(c.agreed_price * c.commission_rate / 100);
-                  const platformFee = Math.round(c.agreed_price * c.platform_fee_pct / 100);
+                  const commission = c.agreed_price * c.commission_rate / 100;
+                  const platformFee = c.agreed_price * c.platform_fee_pct / 100;
                   const net = c.agreed_price - commission - platformFee;
                   const myReview = Reviews.getMyReviewForClosing(c.id);
                   const withinWindow = c.completed_at &&

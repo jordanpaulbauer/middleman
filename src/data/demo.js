@@ -168,9 +168,15 @@ export function getListingById(id) {
   return DEMO_LISTINGS.find(l => l.id === id);
 }
 
-export function formatMoney(cents) {
-  if (typeof cents !== 'number') return '$0';
-  return '$' + cents.toLocaleString('en-US');
+// Formats a dollar amount (not cents — name is historical) with two
+// decimals and thousand separators. Always shows cents so split
+// breakdowns don't round small commissions to a misleading "$0".
+export function formatMoney(amount) {
+  if (typeof amount !== 'number' || !isFinite(amount)) return '$0.00';
+  return '$' + amount.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export function formatDate(iso) {

@@ -17,7 +17,7 @@ export default function ListingDetailModal({ listing, onClose, onOpenChat, onRef
 
   const seller = getUserById(listing.seller_id);
   const claimer = listing.claimed_by ? getUserById(listing.claimed_by) : null;
-  const payout = Math.round(listing.price * listing.commission / 100);
+  const payout = listing.price * listing.commission / 100;
   const isAvailable = listing.status === 'open';
   const isClaimed = listing.status === 'claimed' || listing.status === 'negotiating';
   const isSold = listing.status === 'sold';

@@ -41,7 +41,7 @@ export default function ClosingsPage() {
   const completedClosings = allClosings.filter(c => c.status === 'completed');
 
   const totalEscrow = activeClosings.reduce((s, c) => s + (c.status === 'paid' || c.status === 'item_confirmed' ? c.agreed_price : 0), 0);
-  const totalEarned = completedClosings.reduce((s, c) => s + Math.round(c.agreed_price * c.commission_rate / 100), 0);
+  const totalEarned = completedClosings.reduce((s, c) => s + c.agreed_price * c.commission_rate / 100, 0);
 
   const filtered = tab === 'active' ? activeClosings : tab === 'completed' ? completedClosings : allClosings;
 
@@ -110,8 +110,8 @@ export default function ClosingsPage() {
             const closer = Profile.get(c.closer_id);
             const stepIdx = getStepIndex(c.status);
             const isExpanded = expanded[c.id];
-            const commission = Math.round(c.agreed_price * c.commission_rate / 100);
-            const platformFee = Math.round(c.agreed_price * c.platform_fee_pct / 100);
+            const commission = c.agreed_price * c.commission_rate / 100;
+            const platformFee = c.agreed_price * c.platform_fee_pct / 100;
             const sellerNet = c.agreed_price - commission - platformFee;
             const isSeller = c.seller_id === user?.id;
 
@@ -169,6 +169,9 @@ export default function ClosingsPage() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 500 }}>
                           <span>Total</span><span>{formatMoney(c.agreed_price)}</span>
                         </div>
+                      </div>
+                      <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                        Stripe also charges a processing fee (~2.9% + 30¢) deducted from the buyer's total before splits.
                       </div>
                     </div>
 
@@ -331,6 +334,9 @@ export default function ClosingsPage() {
                     <span>Closer (you)</span><span style={{ color: 'var(--green)', fontWeight: 500 }}>{formatMoney(previewComm)}</span></div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: 'var(--text-muted)' }}>
                     <span>Platform (4%)</span><span>{formatMoney(previewPlatform)}</span></div>
+                  <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                    Stripe also charges a processing fee (~2.9% + 30¢) deducted from the buyer's total before splits.
+                  </div>
                 </div>
               )}
             </div>
