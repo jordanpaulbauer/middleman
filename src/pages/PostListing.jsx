@@ -78,17 +78,31 @@ export default function PostListing() {
           canvas.toBlob(async (blob) => {
             if (!blob) return reject(new Error('Could not compress image'));
             const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
-            const { error: upErr } = await supabase.storage
-              .from('listing-photos')
-              .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
-            if (upErr) return reject(new Error(upErr.message));
-            const { data: pub } = supabase.storage.from('listing-photos').getPublicUrl(path);
-            resolve({
-              url: pub.publicUrl,
-              path,
-              name: file.name,
-              size: Math.round(blob.size / 1024),
-            });
+            try {
+              // Race the Supabase upload against a hard 20s timeout. Without
+              // this, a wedged storage client or flaky network leaves the
+              // user staring at "Uploading photos…" forever with no recourse.
+              const uploadResult = await Promise.race([
+                supabase.storage
+                  .from('listing-photos')
+                  .upload(path, blob, { contentType: 'image/jpeg', upsert: false }),
+                new Promise((_, rej) => setTimeout(
+                  () => rej(new Error('Upload timed out after 20s — check your connection and retry')),
+                  20000
+                )),
+              ]);
+              const { error: upErr } = uploadResult;
+              if (upErr) return reject(new Error(upErr.message));
+              const { data: pub } = supabase.storage.from('listing-photos').getPublicUrl(path);
+              resolve({
+                url: pub.publicUrl,
+                path,
+                name: file.name,
+                size: Math.round(blob.size / 1024),
+              });
+            } catch (err) {
+              reject(err);
+            }
           }, 'image/jpeg', 0.8);
         };
         img.src = e.target.result;
