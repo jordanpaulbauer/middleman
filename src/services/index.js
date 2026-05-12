@@ -638,7 +638,11 @@ export const Listings = {
         notify();
       }
       try {
-        const { data: row, error } = await supabase.rpc('claim_listing', { p_listing_id: listingId });
+        const { data: row, error } = await withTimeout(
+          supabase.rpc('claim_listing', { p_listing_id: listingId }),
+          12000,
+          'claim_listing'
+        );
         if (error) throw new Error(error.message);
         const updated = dbListingToUi(Array.isArray(row) ? row[0] : row);
         listings = listings.map(l => l.id === listingId ? updated : l);
@@ -664,7 +668,11 @@ export const Listings = {
 
   extend: async (listingId) => {
     if (isSupabaseEnabled) {
-      const { data: row, error } = await supabase.rpc('extend_claim', { p_listing_id: listingId });
+      const { data: row, error } = await withTimeout(
+        supabase.rpc('extend_claim', { p_listing_id: listingId }),
+        12000,
+        'extend_claim'
+      );
       if (error) throw new Error(error.message);
       const updated = dbListingToUi(Array.isArray(row) ? row[0] : row);
       listings = listings.map(l => l.id === listingId ? updated : l);
@@ -693,10 +701,16 @@ export const Listings = {
   },
 
   // Closer releases their claim back to the marketplace. Server enforces
-  // that no closing is in flight before unwinding.
+  // that no closing is in flight before unwinding. Wrapped in a 12s
+  // timeout so a wedged supabase-js client can't trap the UI in an
+  // endless spinner — the user gets a real error instead.
   withdraw: async (listingId) => {
     if (isSupabaseEnabled) {
-      const { data, error } = await supabase.rpc('withdraw_claim', { p_listing_id: listingId });
+      const { data, error } = await withTimeout(
+        supabase.rpc('withdraw_claim', { p_listing_id: listingId }),
+        12000,
+        'withdraw_claim'
+      );
       if (error) throw new Error(error.message);
       const updated = dbListingToUi(Array.isArray(data) ? data[0] : data);
       listings = listings.map(l => l.id === listingId ? updated : l);

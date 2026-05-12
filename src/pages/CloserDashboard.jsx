@@ -6,6 +6,7 @@ import { getUserById, formatMoney, formatDate } from '../data/demo';
 import CountdownTimer, { CountdownProgress } from '../components/CountdownTimer';
 import Seo from '../components/Seo';
 import AsyncButton from '../components/AsyncButton';
+import { useToast } from '../hooks/useToast';
 
 export default function CloserDashboard({ onOpenChat }) {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function CloserDashboard({ onOpenChat }) {
   const [reviewStars, setReviewStars] = useState(5);
   const [reviewText, setReviewText] = useState('');
   const user = Auth.getUser();
+  const { addToast } = useToast();
 
   const handleReview = async () => {
     if (!showReviewModal) return;
@@ -24,12 +26,17 @@ export default function CloserDashboard({ onOpenChat }) {
         stars: reviewStars,
         text: reviewText,
       });
+      addToast({ type: 'success', title: 'Review submitted', message: 'Stays private until the seller also reviews or 21 days pass.' });
       setShowReviewModal(null);
       setReviewText('');
       setReviewStars(5);
       setTick(t => t + 1);
     } catch (err) {
-      window.alert(err?.message || 'Could not submit review');
+      addToast({
+        type: 'error',
+        title: 'Could not submit review',
+        message: err?.message || 'Try again in a moment.',
+      });
     }
   };
 
@@ -156,9 +163,15 @@ export default function CloserDashboard({ onOpenChat }) {
                           if (!window.confirm(`Release claim on "${listing.title}"? Other closers will be able to claim it.`)) return;
                           try {
                             await Listings.withdraw(listing.id);
+                            addToast({ type: 'success', title: 'Claim released', message: 'Listing is back on the marketplace.' });
                             setTick(t => t + 1);
                           } catch (err) {
-                            window.alert(err?.message || 'Could not withdraw claim');
+                            addToast({
+                              type: 'error',
+                              title: 'Could not release claim',
+                              message: err?.message || 'Try again in a moment.',
+                            });
+                            console.error('[CloserDashboard] withdraw failed:', err);
                           }
                         }}
                       >
