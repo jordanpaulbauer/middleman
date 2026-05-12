@@ -171,14 +171,20 @@ export default function ListingDetailModal({ listing, onClose, onOpenChat, onRef
           {isClaimed && (
             <div style={{ background: 'var(--accent-light)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 24, border: '1px solid #fed7aa' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <div style={{ fontWeight: 500 }}>Claimed by {claimer?.full_name || 'Unknown'}</div>
+                <div style={{ fontWeight: 500 }}>Claimed by {claimer?.full_name || 'a closer'}</div>
                 <CountdownTimer endDate={listing.claim_end} />
               </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                <button className="btn btn-secondary btn-sm" onClick={handleMessage}>
-                  <MessageCircle size={14} /> Message {isMyListing ? 'Closer' : 'Seller'}
-                </button>
-              </div>
+              {/* Only the two parties to the deal can DM — random third-party
+                  closers shouldn't be able to ping the seller around an
+                  existing claim. Sellers see "Message Closer," the claimer
+                  sees "Message Seller," everyone else sees no button. */}
+              {(isMyListing || isMyClaim) && (
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  <button className="btn btn-secondary btn-sm" onClick={handleMessage}>
+                    <MessageCircle size={14} /> Message {isMyListing ? 'Closer' : 'Seller'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
