@@ -592,21 +592,27 @@ export const Listings = {
   create: async (data) => {
     if (isSupabaseEnabled) {
       if (!currentUser?.id) throw new Error('Sign in first');
-      const { data: row, error } = await supabase
-        .from('listings')
-        .insert({
-          seller_id: currentUser.id,
-          title: data.title,
-          description: data.description || null,
-          category: data.category,
-          condition: data.condition,
-          price_cents: dollarsToCents(data.price),
-          commission_bps: pctToBps(data.commission),
-          location: data.location || null,
-          photos: data.photos || [],
-        })
-        .select()
-        .single();
+      // 15s timeout so a wedged supabase-js client surfaces a real error
+      // instead of trapping the user behind a spinning Post Listing button.
+      const { data: row, error } = await withTimeout(
+        supabase
+          .from('listings')
+          .insert({
+            seller_id: currentUser.id,
+            title: data.title,
+            description: data.description || null,
+            category: data.category,
+            condition: data.condition,
+            price_cents: dollarsToCents(data.price),
+            commission_bps: pctToBps(data.commission),
+            location: data.location || null,
+            photos: data.photos || [],
+          })
+          .select()
+          .single(),
+        15000,
+        'create listing'
+      );
       if (error) throw new Error(error.message);
       const ui = dbListingToUi(row);
       listings = [ui, ...listings];

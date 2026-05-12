@@ -11,8 +11,11 @@
     <meta property="og:title" content="MIDDLEMAN — Commission marketplace for closers and sellers" />
     <meta property="og:description" content="List items for sale or claim listings to close. Earn commission on every closed deal." />
     <meta name="twitter:card" content="summary_large_image" />
-    <link rel="preload" href="/fonts/GTStandard-Regular.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/GTStandard-Medium.woff2" as="font" type="font/woff2" crossorigin />
+    <!-- GT Standard preload — re-enable once the .woff2 files are in public/fonts/.
+         Until then, the @font-face in index.css falls back to system fonts cleanly
+         and we skip the preload to avoid 404 console noise. -->
+    <!-- <link rel="preload" href="/fonts/GTStandard-Regular.woff2" as="font" type="font/woff2" crossorigin /> -->
+    <!-- <link rel="preload" href="/fonts/GTStandard-Medium.woff2" as="font" type="font/woff2" crossorigin /> -->
   </head>
   <body>
     <div id="root"></div>
