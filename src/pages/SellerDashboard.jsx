@@ -111,14 +111,15 @@ export default function SellerDashboard({ onOpenChat }) {
                         {l.status === 'open' && (
                           <>
                             <button
-                              className="btn btn-ghost btn-sm"
-                              title="Edit listing"
+                              className="btn btn-secondary btn-sm"
+                              title="Edit this listing"
                               onClick={() => setEditingListing(l)}
-                              style={{ padding: 6 }}
-                            ><Edit3 size={14} /></button>
+                            >
+                              <Edit3 size={14} /> Edit
+                            </button>
                             <AsyncButton
-                              className="btn btn-ghost btn-sm"
-                              title="Delete listing"
+                              className="btn btn-secondary btn-sm"
+                              title="Delete this listing"
                               onClick={async () => {
                                 if (!window.confirm(`Delete "${l.title}"? This can't be undone.`)) return;
                                 try {
@@ -129,8 +130,10 @@ export default function SellerDashboard({ onOpenChat }) {
                                   addToast({ type: 'error', title: 'Could not delete', message: err?.message });
                                 }
                               }}
-                              style={{ padding: 6, color: 'var(--red)' }}
-                            ><Trash2 size={14} /></AsyncButton>
+                              style={{ color: 'var(--red)', borderColor: 'var(--red-light)' }}
+                            >
+                              <Trash2 size={14} /> Delete
+                            </AsyncButton>
                           </>
                         )}
                         <span className={`badge ${l.status === 'open' ? 'badge-green' : l.status === 'sold' ? 'badge-grey' : 'badge-orange'}`}>
