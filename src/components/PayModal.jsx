@@ -121,23 +121,40 @@ function CheckoutForm({ onSuccess, closingId }) {
     if (!stripe || !elements) return;
     setSubmitting(true);
     setErr('');
-    // Confirm payment without redirect — we want to stay in the modal.
-    const { error, paymentIntent } = await stripe.confirmPayment({
-      elements,
-      redirect: 'if_required',
-    });
-    if (error) {
-      setErr(error.message || 'Payment failed');
-      setSubmitting(false);
-      return;
-    }
-    if (paymentIntent?.status === 'succeeded' || paymentIntent?.status === 'processing') {
-      onSuccess?.(paymentIntent);
-      // Note: server-side confirmation comes via webhook; this handler is
-      // just for the UX. The closing's status flips to 'paid' once the
-      // payment_intent.succeeded webhook lands (usually within a second).
-    } else {
+    try {
+      // 30s timeout so a wedged Stripe.js call can't trap the user on
+      // "Processing…" forever. confirmPayment normally returns in <3s;
+      // a slow 3DS challenge has its own modal/redirect and shouldn't
+      // hold this promise open that long either.
+      const timeout = new Promise((_, rej) => setTimeout(
+        () => rej(new Error('Payment is taking longer than expected. Refresh and check the closing status — your card may have already been charged.')),
+        30000
+      ));
+      const result = await Promise.race([
+        stripe.confirmPayment({ elements, redirect: 'if_required' }),
+        timeout,
+      ]);
+      const { error, paymentIntent } = result || {};
+      if (error) {
+        setErr(error.message || 'Payment failed');
+        return;
+      }
+      if (paymentIntent?.status === 'succeeded' || paymentIntent?.status === 'processing') {
+        // Server-side confirmation comes via webhook; this handler just
+        // closes the modal. The closing's status flips to 'paid' once
+        // payment_intent.succeeded lands (usually within a second).
+        onSuccess?.(paymentIntent);
+        // Don't reset submitting — onSuccess unmounts the modal.
+        return;
+      }
       setErr(`Payment status: ${paymentIntent?.status || 'unknown'}`);
+    } catch (err) {
+      setErr(err?.message || 'Payment failed');
+    } finally {
+      // Always unlock the button if the modal is still mounted. The
+      // success path returns early so this is a no-op there; the
+      // error/timeout paths get the button back to "Pay now" so the
+      // user can retry.
       setSubmitting(false);
     }
   };
